@@ -1,9 +1,10 @@
-#!/opt/portage/usr/bin/perl -w -p
+#!/usr/bin/perl -w -p
 BEGIN { $ENV{PERL_JSON_BACKEND} = 2 } # with JSON::XS
 
 use POSIX qw/strftime/;
 use Date::Parse qw/strptime/; 
 use JSON;
+use Encode qw/decode/;
 
 if (/^\s*$/ || /^{"delete":/) { $_ = ""; next }
 
@@ -14,7 +15,7 @@ my $json = new JSON::XS;
 # http://search.cpan.org/~mlehmann/JSON-XS-2.26/XS.pm#A_FEW_NOTES_ON_UNICODE_AND_PERL
 
 # Twitter produces illegal \uffff in its JSON
-$_ =~ s/\x{ffff}//eg
+$_ = decode("utf8", $_, Encode::FB_DEFAULT);
 
 my $twit;
 eval {

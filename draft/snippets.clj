@@ -1,0 +1,10 @@
+(import [org.joda.time DateTime])
+(import [org.joda.time.format DateTimeFormat])
+(def dtFmt (DateTimeFormat/forPattern "YYYY-MM-dd HH:mm:ss"))
+(def t "2009-06-15 04:01:00")
+(.parseDateTime dtFmt t)
+;; (. dtFmt parseDateTime "2009-06-15 04:01:00")
+;; (-> dtFmt (.parseDateTime "2009-06-15 04:01:00"))
+;; turns out you don't have to do full format-parse:
+(require '[clojure.contrib.str-utils2 :as s2])
+(DateTime. (str (s2/replace t " " "T") "Z"))
