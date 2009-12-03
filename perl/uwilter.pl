@@ -40,12 +40,29 @@ sub pretwit {
 	my $user = $t->{user};
 	my $newt = {};
 	
+	$newt->{twit_id}         = $t->{id};
 	$newt->{user_id}         = $user->{id};
 	$newt->{screen_name}     = $user->{screen_name};
 	$newt->{followers_count} = $user->{followers_count};
 	$newt->{friends_count}   = $user->{friends_count};
 	$newt->{statuses_count}  = $user->{statuses_count};
-	$newt->{favorites_count} = $user->{favorites_count};
+	$newt->{favorites_count} = $user->{favorites_count} if $user->{favorites_count};
+	$newt->{created_at}      = iso_date($t->{created_at});
 	
 	%$t = %$newt;	
+}
+
+sub iso_date {
+	# always return properly-formatted date?
+	my $res = "0000-00-00 00:00:00";
+	if (@_ > 0) {
+		my $x = shift @_;
+		@iso = strptime($x);
+		eval {
+			$res = strftime('%Y-%m-%d %T',@iso);
+		};
+		if ($@) {
+		}
+	}
+	$res
 }
