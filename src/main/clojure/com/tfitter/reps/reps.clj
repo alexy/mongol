@@ -23,10 +23,12 @@
 
 (defn date-at [s]
   (.parse dateFmt (str s " +0000")))
+
+(def +progress-twits+ 10000)
   
 (defn scan-reps [[reps counter] twit]
-  (let [grane 1000000]
-  (if (= (mod counter grane) 0) (.print System/err (format " %d" (quot counter grane)))))
+  (if (= (mod counter +progress-twits+) 0) 
+    (.print System/err (format " %d" (quot counter +progress-twits+))))
   ;; (print twit)
   (let [to (:in_reply_to_screen_name twit)
         reps 
@@ -40,13 +42,13 @@
             reps)]
     [reps (inc counter)]))
  
-(def reps ((reduce scan-users [{} 0] twits) 0))
+(def reps ((reduce scan-reps [{} 0] twits) 0))
 (print reps)
   
 (time 
   (def reps
-    ((reduce scan-users [{} 0] 
-      (fetch :hose :only [:screen_name :in_reply_to_screen_name :created_at])) 0)))
+    ((reduce scan-reps [{} 0] 
+      (take 100000 (fetch :hose :only [:screen_name :in_reply_to_screen_name :created_at]))) 0)))
 (.println System/err)
 
 ;; (time (insert! :reps reps)) ; very slow
@@ -57,7 +59,8 @@
 (time 
   (doseq [x (partition-all 10000 
     ;; (map hashify (seq reps))
-     (map (fn [[k v]] { :user k :reps v }) reps)
+    ;; (map (fn [[from rs]] { :user from :reps (map (fn [to times] {:to to ??}) rs) }) reps)
+    (map (fn [[k v]] { :user k :reps v }) reps)
       )] 
     (.print System/err ".")
     (mass-insert! :reps x)))
