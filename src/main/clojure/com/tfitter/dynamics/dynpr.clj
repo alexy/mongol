@@ -1,5 +1,7 @@
 (ns mongol.repliers
-  (:use [somnium.congomongo])
+  (:use [somnium.congomongo]
+        [clojure.contrib.seq-utils :only [partition-all]])
+    )
   (:require [clojure.contrib.str-utils2 :as s2])
   (:import [org.joda.time DateTime]
            [edu.uci.ics.jung.graph DirectedSparseGraph]
