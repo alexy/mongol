@@ -63,3 +63,5 @@
 (sort-by (fn [[k v]] [(- (count v)) k]) coll)
 (sort-by (fn [[k v]] [(- (apply + (map second v))) k]) coll)
 
+(println "hello swank")
+(use '(incanter core stats charts))
