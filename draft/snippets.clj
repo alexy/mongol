@@ -38,7 +38,28 @@
 (doseq [x '({:user "a" :reps {:a 1 :b 2}})] (let [{ a :user rs :reps} x] (doseq [to (keys rs)] (print to))))
 (doseq [x (take 5 reps)] (let [{ from :user rs :reps} x] (doseq [to (keys rs)] (println [from (name to)]))))
 
-;; build graph from mongo reps, form in-memory would require [k v] instead of {from :user rs :reps}:
-(doseq [x reps] (let [{from :user rs :reps} x] (doseq [to (keys rs)] (let [to (name to)] 
-  (.addEdge g (str from " " to) from to)))))
- 
+(sort #(> (%1 1) (%2 1)) '(["a" 1] ["a" 2]))
+
+;;  use sorted set or this to achieve (distinct) on an already sorted vector faster, @chouser:
+(reduce #(if (= %2 (peek %1)) %1 (conj %1 %2)) [] [1 2 4 4 5 5 5 5 6 6 8])
+
+;; durka42:
+(let [v [1 5 3 3 2 4 5 5 4 5 1 2 1 2 3 5]] (map #(vector (first %) (count %)) (vals (group-by identity v))))
+
+;; alexyk:
+(let [g [1 5 3 3 2 4 5 5 4 5 1 2 1 2 3 5] gs (sort g) [v x c] (reduce (fn [[v x c] y] (if (= x y) [v x (inc c)] [(conj v [x c]) y 1])) [[] (first gs) 1] (rest gs))] (conj v [x c]))
+
+;; devlinsf:
+(let [v [1 5 3 3 2 4 5 5 4 5 1 2 1 2 3 5]] (map (juxt first count) (partition-by identity v)))
+
+
+;;  sorting seqs of [string vector] by longer vectors first, alphabetic order of strings tie-breaking:
+;; me
+(sort (fn [[k1 v1][k2 v2]] (let [len1 (count v1) len2 (count v2)] (if (> len1 len2) true (if (< len1 len2) false (.compareTo k1 k2))))) sper-days)
+
+;;  chouser
+(sort (fn [[k1 v1][k2 v2]] (let [len1 (count v1) len2 (count v2) c1 (compare len1 len2)] (if (zero? c1) (compare k1 k2) c1))) coll) 
+
+(sort-by (fn [[k v]] [(- (count v)) k]) coll)
+(sort-by (fn [[k v]] [(- (apply + (map second v))) k]) coll)
+

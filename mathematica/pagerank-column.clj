@@ -1,0 +1,5 @@
+(use '[clojure.contrib.duck-streams :only (with-out-writer)])
+(use '[somnium.congomongo])
+(mongo! :db "twitter")
+(def pagerank (map #(:score %) (fetch :pagerank)))
+(with-out-writer "pagerank-column.txt" (doseq [x pagerank] (println x)))
