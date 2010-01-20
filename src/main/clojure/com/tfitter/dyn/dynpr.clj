@@ -4,7 +4,7 @@
   (let [
     {mongo-names :names 
      quant       :quant 
-     limit-days  :days 
+     limit-days  :limit-days 
       :or {mongo-names {} quant 10000}} map-params
         
     numtwits {}
@@ -44,7 +44,7 @@
             numtwits  (update-numtwits numtwits user)
             replies   (update-replies  replies  user to at)
             mentions  (update-mentions mentions user to at)
-            ;; graph     (update-graph    graph    user to)
+            graph     (update-graph    graph    user to)
             ]
     
             (when (= (mod progress quant) 0) (.print System/err (str " "(quot progress quant))))

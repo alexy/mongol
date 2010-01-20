@@ -1,13 +1,51 @@
 (ns mongol.repliers
   (:use [somnium.congomongo]
         [clojure.contrib.seq-utils :only [partition-all]])
-  (:require [clojure.contrib.str-utils2 :as s2])
+  ;; (:require [clojure.contrib.str-utils2 :as s2])
   (:import [org.joda.time DateTime]
            [edu.uci.ics.jung.graph DirectedSparseGraph]
             edu.uci.ics.jung.algorithms.scoring.PageRank))
 
 (mongo! :db "twitter")      
       
+(defn mongo-store-day-pairs 
+  "store a 2-tuple collection in mongo as map-pairs with given key and value name, in a given collection"
+  [coll coll-name key-name val-name day & quant]
+  (.print System/err (str "saving " coll-name ", day " day))
+  (let [coll-desc (sort-by second > coll)
+    _ (.print System/err ">>>")
+    quant (or quant 10000) 
+    ]
+  (doseq [x (partition-all quant (map (fn [[k v]] {key-name k val-name v :day day}) coll-desc))] 
+  (.print System/err ".") (mass-insert! coll-name x))
+  (.println System/err)))
+  
+;;  (->> {:a {:b [1 2] :c [3]} :b {:a [5 6] :d [7 8 9]}} 
+;;  (reduce (fn [m [from reps]] (let [length 
+;;  (reduce (fn [num [_ array]] (+ num (count array))) 0 reps)] 
+;;      (assoc m from length))) {}))  
+
+(defn reps-lens
+  "summarize a replier graph by replacing, for each from node,
+  the map of to-event-lists with the total number of the to-events"
+  [reps]
+  (->> reps (reduce (fn [m [from reps]] (let [length 
+       (reduce (fn [num [_ array]] (+ num (count array))) 0 reps)] 
+           (assoc m from length))) {})))
+           
+(defn pagerank 
+	"compute pagerank of a graph, return pairs (user, rank) in decreasing order of rank"
+	[graph & alpha]
+	(let [alpha (or alpha 0.15)
+		  ranker (PageRank. graph alpha)
+		  _ (.evaluate ranker)
+		  nodes-iter (.. graph (getVertices) (iterator))
+		  nodes (iterator-seq nodes-iter)
+          pg (map (fn [user] [user (.getVertexScore ranker user)]) nodes)]
+          (sort-by second > pg)))
+          
+		
+		
 (defn day-change 
   "record daily stats in mongo; TODO key names are hardcoded for now"
   [mongo-names numtwits replies mentions graph progress day]
@@ -31,11 +69,15 @@
       
       numreplies    (reps-lens replies)
       nummentions   (reps-lens mentions)
+      pageranks     (pagerank graph) 
       ]
-      (insert! :daytwits {:day day, :twits progress})
-      (mongo-store-day-pairs numtwits   :numtwits-mongo    :user :numtwits    day)
-      (mongo-store-day-pairs numreplies :numreplies-mongo  :user :numreplies  day)
-      (mongo-store-day-pairs numreplies :nummentions-mongo :user :nummentions day)   
+      ;; NB :to nil is needed to avoid NPE
+      (.println System/err (str "\nsaving " daytwits-mongo ", for day " day "=> " progress))
+      (insert! daytwits-mongo {:day day, :twits progress} :to nil)
+      (mongo-store-day-pairs numtwits    numtwits-mongo    :user :numtwits    day)
+      (mongo-store-day-pairs numreplies  numreplies-mongo  :user :numreplies  day)
+      (mongo-store-day-pairs nummentions nummentions-mongo :user :nummentions day)   
+      (mongo-store-day-pairs pageranks   pagerank-mongo    :user :pagerank    day)   
     ))
       
 (defn update-numtwits
@@ -60,14 +102,17 @@
   
 (defn update-graph
   [graph from to]
-  (.addEdge graph (str from " " to) from to)
+  (when (and from to) 
+  	(.addEdge graph (str from " " to) from to))
+  graph
   )
   
 (defn get-twits
   "lazy seq of all twits with possible :only restriction"
   [coll-name]
   (let [
-    raw  (fetch coll-name :only [:screen_name :in_reply_to_screen_name :created_at])
+    raw  (fetch coll-name :only [:screen_name :in_reply_to_screen_name :created_at]
+    					  :where {:$orderby {:created_at 1}})
     ]
     ;; TODO result destructuring ahead anyways, dissoc not needed?
   (map #(dissoc % :_id :_ns) raw)))
@@ -85,32 +130,9 @@
 (defn daynum-of-dt
   "day of twit from created_at's datetime"
   [dt]
-  (.getDayOfYear (DateTime. dt)))
+  (.getDayOfYear dt))
   
-(defn mongo-store-day-pairs 
-  "store a 2-tuple collection in mongo as map-pairs with given key and value name, in a given collection"
-  [coll coll-name key-name val-name day & quant]
-  (.print System/err (str "saving " coll-name "for day " day))
-  (let [coll-desc (sort-by second > coll)
-    _ (.print System/err ">>>")
-    quant (or quant 10000) 
-    ]
-  (doseq [x (partition-all quant (map (fn [[k v]] {key-name k val-name v :day day}) coll-desc))] 
-  (.print System/err ".") (mass-insert! coll-name x))
-  (.println System/err)))
-  
-;;  (->> {:a {:b [1 2] :c [3]} :b {:a [5 6] :d [7 8 9]}} 
-;;  (reduce (fn [m [from reps]] (let [length 
-;;  (reduce (fn [num [_ array]] (+ num (count array))) 0 reps)] 
-;;      (assoc m from length))) {}))  
 
-(defn reps-lens
-  "summarize a replier graph by replacing, for each from node,
-  the map of to-event-lists with the total number of the to-events"
-  [reps]
-  (->> reps (reduce (fn [m [from reps]] (let [length 
-       (reduce (fn [num [_ array]] (+ num (count array))) 0 reps)] 
-           (assoc m from length))) {})))
 
 ;; NB here's what a twit looks like in :hose in MongoDB:
 ;; mongol.repliers=> (fetch-one :hose)

@@ -1,0 +1,6 @@
+#!/bin/zsh
+jars=( lib/*.jar )
+LIB=${(j.:.)var}
+JREFS=-XX:+UseCompressedOops
+JPERMGEN=-XX:MaxPermSize=1g
+rlwrap ${JAVA:-java} -server -d64 $JAVA_OPTS $JPERMGEN $JREFS -cp $CLASSPATH:$LIB clojure.main
