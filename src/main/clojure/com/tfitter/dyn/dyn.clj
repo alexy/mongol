@@ -71,8 +71,8 @@
       nummentions   (reps-lens mentions)
       pageranks     (pagerank graph) 
       ]
-      ;; NB :to nil is needed to avoid NPE
       (.println System/err (str "\nsaving " daytwits-mongo ", for day " day "=> " progress))
+      ;; NB :to nil is needed to avoid NPE:
       (insert! daytwits-mongo {:day day, :twits progress} :to nil)
       (mongo-store-day-pairs numtwits    numtwits-mongo    :user :numtwits    day)
       (mongo-store-day-pairs numreplies  numreplies-mongo  :user :numreplies  day)
@@ -112,7 +112,7 @@
   [coll-name]
   (let [
     raw  (fetch coll-name :only [:screen_name :in_reply_to_screen_name :created_at]
-    					  :where {:$orderby {:created_at 1}})
+    					  :where {:$orderby {:created_at 1}} :no-timeout? true)
     ]
     ;; TODO result destructuring ahead anyways, dissoc not needed?
   (map #(dissoc % :_id :_ns) raw)))

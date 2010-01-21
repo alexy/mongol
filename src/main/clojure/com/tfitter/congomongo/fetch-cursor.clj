@@ -1,5 +1,12 @@
 (ns somnium.congomongo
   (:import com.mongodb.Bytes))
+  
+; defn doesn't work for java methods, non-functions:  
+;(defn methornil [x f a] (if a (f x a) x))
+;chouser
+;(defmacro methornil [x f a] `(if ~a (~f ~x ~a) ~x))
+;arohner
+(defmacro methornil [x f a] `(let [a# ~a x# ~x] (if a# (~f x# a#) x#)))
 
 (defunk fetch 
   "Fetches objects from a collection.
@@ -22,7 +29,10 @@
   (let [n-where (coerce where [from :mongo])
         n-only  (coerce-fields only)
         n-col   (get-coll coll)
-        n-limit (if limit (- 0 (Math/abs limit)) 0)]
+        n-limit (if limit (- 0 (Math/abs limit)) 0)
+        n-limit (int n-limit) ; TODO is it really encessary after ^^?
+        skip    (int skip)
+        ]
     (cond
       count? (.getCount n-col n-where n-only)
       one?   (when-let [m (.findOne
@@ -30,10 +40,13 @@
                          #^DBObject n-where
                          #^DBObject n-only)]
                (coerce m [:mongo as]))
-      :else  (when-let [m (.find #^DBCollection n-col
+      :else  (when-let [m (->  #^DBCollection n-col
+      						   (.find 
                                #^DBObject n-where
-                               #^DBObject n-only
-                               (int skip)
-                               (int n-limit))]
-               (when no-timeout? (.addOption m Bytes/QUERYOPTION_NOTIMEOUT))
+                               #^DBObject n-only)
+                               (methornil .skip  skip)
+                               (methornil .limit n-limit))]
+               (when no-timeout?
+               	(.addOption m Bytes/QUERYOPTION_NOTIMEOUT)
+               	(.println System/err (str "set no-timeout on " coll)))
                (coerce m [:mongo as] :many :true)))))
