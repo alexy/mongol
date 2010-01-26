@@ -25,13 +25,13 @@
   TODO add progress"
   [dpr & [quant]]
   (let [quant (or quant 1000000)
-    [unsorted _] (->> dpr (reduce (fn [[res progress] [user days]] 
+    [unsorted _] (->> dpr (reduce (fn [theres [user days]] 
       (reduce (fn [[res progress] [day num]]
         (when (and quant (= (mod progress quant) 0)) 
 			       (.print System/err (str " " (quot progress quant))))
         (let [res (update-in res [day] #(conj (or % []) [user num]))]
           [res (inc progress)])) 
-      res days)) [{} 0]))]
+      theres days)) [{} 0]))]
       (.print System/err " days: ") 
       (->> unsorted (map (fn [[k v]] 
         (let [
@@ -66,7 +66,7 @@
   "takes the result of ranked-graph"
   [by-day & [quant]]
   (let [quant (or quant 1000000)]        
-  (->> by-day (reduce (fn [[res progress] [day pairs]]
+  (->> by-day (reduce (fn [theres [day pairs]]
       (reduce (fn [[res progress] [user rank]]
         (let [rx (res user)
           yz (assoc (or rx (sorted-map)) day rank)
@@ -75,7 +75,7 @@
 			       (.print System/err (str " " (quot progress quant))))        
         (let [res (assoc! res user yz)]
           [res (inc progress)])))
-        res pairs)) [(transient {}) 0])
+        theres pairs)) [(transient {}) 0])
         first
         persistent!
         )))
