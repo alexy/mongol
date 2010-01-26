@@ -10,6 +10,25 @@
   (let [[x & xs] s [day0 num0] x] (->> xs (reduce (fn [[r prev-day prev-num] [day num]] 
     [(and r (<= prev-day day) (<= prev-num num)) day num]) [true day0 num0]) (first))))
 
+(defn increasing-sparse?
+  "is this sparse vector monotonically non-decreasing?"
+  [s]
+  (let [[x & xs] s [day0 num0] x] (->> xs (reduce (fn [[r prev-day prev-num] [day num]] 
+    [(and r (< prev-day day) (< prev-num num)) day num]) [true day0 num0]) (first))))
+
+(defn nonincreasing-sparse?
+  "is this sparse vector monotonically non-decreasing?"
+  [s]
+  (let [[x & xs] s [day0 num0] x] (->> xs (reduce (fn [[r prev-day prev-num] [day num]] 
+    [(and r (<= prev-day day) (>= prev-num num)) day num]) [true day0 num0]) (first))))
+
+(defn decreasing-sparse?
+  "is this sparse vector monotonically non-decreasing?"
+  [s]
+  (let [[x & xs] s [day0 num0] x] (->> xs (reduce (fn [[r prev-day prev-num] [day num]] 
+    [(and r (< prev-day day) (> prev-num num)) day num]) [true day0 num0]) (first))))
+
+
 (defn grew-by-factor-sparse?
   "see if a sparse vector has grown by a factor between the ends"
   [coll factor]

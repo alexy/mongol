@@ -1,11 +1,15 @@
 ;; TODO make it a defn or a macro already
 ;; make grane optional
+
+(use [clojure.contrib.seq-utils partition-all])
+
 (defn mongo-store-pairs 
   "store a 2-tuple collection in mongo as map-pairs with given key and value name, in a given collection"
-  [coll coll-name key-name val-name quant]  
-  (doseq [x (partition-all quant (map (fn [[k v]] {key-name k val-name v}) coll))] 
-  (.print System/err ".") (mass-insert! coll-name x))
-  (.println System/err))
+  [coll coll-name key-name val-name & quant]
+    (let [quant (or quant 10000)] 
+    (doseq [x (partition-all quant (map (fn [[k v]] {key-name k val-name v}) coll))] 
+    (.print System/err ".") (mass-insert! coll-name x)))
+    (.println System/err))
 
 ;; from rank-reps, replaced by mongo-store-pairs
 (time 

@@ -4,10 +4,7 @@
 
 (def sper-sorted (sort (fn [[_ as] [_ bs]] (> (count a) (count bs))) (seq sper)))  ;  untested!
 
-(def juDate ((first ((fetch-one :sper) :sper)) 1))
-(def juDate (((first ((fetch-one :sper) :sper)) 1) 0))  ;  or second, first
-
-;; day-number moved to days.clj
+(;; day-number moved to days.clj
 
 (use '[clojure.contrib.seq-utils :only (partition-by frequencies)])
  
