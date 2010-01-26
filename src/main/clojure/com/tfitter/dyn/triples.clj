@@ -51,23 +51,27 @@
   
 (defn get-day-reps
 	"load the replier graph rolled by day"
-	[coll-name user-name reps-name & quant]
-	(let [
-		quant (or quant 100000)
-		get-reps (->> coll-name (fetch) (map #(dissoc % :_id :_ns))) ;; (take 10)
-		[res _] 
-		(reduce (fn [[res progress] {from user-name reps reps-name}]
-			(when (= (mod progress quant) 0) 
-				(.print System/err (str " " (quot progress quant))))
-			(let [res (reduce (fn [res [to moments]]
-				(reduce (fn [res moment]
-					(let [daynum (daynum-of-judate moment)]
-						;; TODO we really need update-in-with here for sorted daynum
-						(update-in res [from daynum to] #(inc (or % 0)))))
-					res moments))
-				res reps)]
-				[res (inc progress)]))
-			[{} 0] get-reps)
-		]
-		res))
+	[coll-name user-name reps-name & [quant]]
+	(let [quant (or quant 1000000)
+	  ]
+		(->> (fetch coll-name :dismongo? true) 
+    ;; (take 10) -- for debugging
+		(reduce (fn [theres {from user-name reps reps-name}]
+			(reduce (fn [theres [to moments]]
+				(reduce (fn [[res progress] moment]
+					(let [daynum (daynum-of-judate moment)
+					  rx (or (res from) (sorted-map))
+					  z  (or (rx daynum) 0)
+					  yz (assoc rx daynum (inc z))
+					  ]
+						;; TODO we really need update-in-with! here for sorted daynum
+      			(when (= (mod progress quant) 0) 
+      				(.print System/err (str " " (quot progress quant))))
+						(let [res (assoc! res from yz)]
+						[res (inc progress)])))
+					theres moments))
+				theres reps))
+			[(transient {}) 0])
+    first
+    persistent!)))
 	
