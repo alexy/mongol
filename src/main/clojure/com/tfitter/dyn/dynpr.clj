@@ -5,9 +5,8 @@
   [map-params]
   (let [
     {mongo-names :names 
-     quant       :quant 
-     limit-days  :limit-days 
-      :or {mongo-names {} quant 10000}} map-params
+     :keys [quant limit-days skip-days]
+     :or {mongo-names {} quant 10000}} map-params
         
     numtwits {}
     replies  {}
@@ -38,7 +37,7 @@
 
           ]
       
-        (when (< prev-day day)
+        (when (and (< prev-day day) (> day skip-days))
           (day-change mongo-names numtwits replies mentions graph progress prev-day))
 
         (when (or (not limit-days) (< day limit-days))
