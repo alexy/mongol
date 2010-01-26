@@ -55,7 +55,8 @@
     
     
 (defn ranked-graph-simple
-  "takes the result of ranked-graph"
+  "takes the result of ranked-days and produces a graph like dpagerank, except
+  that the pagerank per day is replaced by the rank's rank that day"
   [by-day]        
   (->> by-day (reduce (fn [res [day pairs]]
       (reduce (fn [res [user rank]]
@@ -63,7 +64,8 @@
         res pairs)) {})))
   
 (defn ranked-graph
-  "takes the result of ranked-graph"
+  "takes the result of ranked-days and produces a graph like dpagerank, except
+  that the pagerank per day is replaced by the rank's rank that day"
   [by-day & [quant]]
   (let [quant (or quant 1000000)]        
   (->> by-day (reduce (fn [theres [day pairs]]

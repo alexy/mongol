@@ -65,3 +65,6 @@
 
 (println "hello swank")
 (use '(incanter core stats charts))
+
+;; print local vars which are fns:
+(->> (ns-interns *ns*) (map (fn [[k v]] [k (fn? (var-get v))])) (filter second) (map first))

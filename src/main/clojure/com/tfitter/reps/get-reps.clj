@@ -23,10 +23,8 @@
 ;; get-reps simply fetches the collection as is
 (defn get-reps  
   "fetch replier graph, progress dot every quant heads, does not lowercase nor merge"
-    [coll & args]
-  (let [{user-key :user-key, reps-key :reps-key, quant :quant 
-         :or {user-key :user reps-key :reps quant 10000}} 
-         (apply hash-map args)
+    [coll user-key reps-key & [quant]]
+  (let [quant (or quant 10000)
   result (persistent! 
   ((reduce (fn [[m n] {from user-key reps reps-key}]
       (if (= (mod n quant) 0) (.print System/err (format " %d" (quot n quant))))     
