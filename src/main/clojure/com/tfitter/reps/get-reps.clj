@@ -19,8 +19,9 @@
 ;; This can be either used to differentiate the from from the to, or unified back to strings-only node names. 
 
 ;; TODO unify "from" and :to, or keep formats intentionally different
-;;  for directed edges?
+;; for directed edges?
 ;; get-reps simply fetches the collection as is
+
 (defn get-reps  
   "fetch replier graph, progress dot every quant heads, does not lowercase nor merge"
     [coll user-key reps-key & [quant]]
@@ -30,6 +31,60 @@
       (if (= (mod n quant) 0) (.print System/err (format " %d" (quot n quant))))     
       [(assoc! m from reps) (inc n)])
     [(transient {}) 0] (fetch coll)) 0) )]
+  (.println System/err)
+  result))
+
+(defn sort-diff-map
+  "convert a map to a sorted map and subtract each prev val from next"
+  [m & [unkeyword diff]]
+  (let [s
+    (if unkeyword
+        (let [k (->> m keys (map #(Integer/parseInt (name %))))
+              v (vals m)]
+        (interleave k v))
+        (apply concat m))
+    sm (apply sorted-map s)]
+    (if diff
+      (let [k  (keys sm)  ; TODO can we split both at the same time, e,g, unzip?
+      v  (vals sm)
+      dv (into [(first v)] (map - (rest v) v))]
+      (->> (interleave k dv) 
+        (partition 2)
+        (filter (fn [[_ y]] (> y 0)))
+        (apply concat)
+        (apply sorted-map)))
+        sm  ; not diff
+        )))
+
+(defn sort-diff-reps
+  "for graphs of the form {:user u :reps {reps-map}}, replace the hash-map reps with a sorted-map,
+  and if diff is true, also replace vals by differences"
+  [reps & [unkeyword diff]]
+  ;; TODO pmap below runs twice slower; replace into {} with something?
+  ;; ->> ... concat (apply hash-map)
+  (->> reps (map (fn [[user reps]] [user (sort-diff-map reps unkeyword diff)])) 
+    (into {})
+    ;; (apply concat) (apply hash-map)
+    ))
+    
+  
+(defn get-reps-sorted  
+  "fetch replier graph, progress dot every quant heads
+  reps will ne converted to a sorted-map, 
+  when diff is true, subtract preceding value from each next reps
+  TODO: sort-diff-map or sort-diff-reps for different graphs!"
+  [coll user-key reps-key & [unkeyword diff nested quant]]
+  (let [quant (or quant 10000)
+  result (->> (fetch coll)
+  (reduce (fn [[m n] {from user-key reps reps-key}]
+      (if (= (mod n quant) 0) (.print System/err (format " %d" (quot n quant)))) 
+      (let [ 
+        ;; params [reps unkeyword diff] 
+        ;; ... (apply sort-diff-reps params) -- slower?
+            reps   (if nested (sort-diff-reps reps unkeyword diff) 
+                              (sort-diff-map  reps unkeyword diff))]
+           [(assoc! m from reps) (inc n)]))
+    [(transient {}) 0]) first persistent!)]
   (.println System/err)
   result))
 

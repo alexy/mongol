@@ -68,3 +68,11 @@
 
 ;; print local vars which are fns:
 (->> (ns-interns *ns*) (map (fn [[k v]] [k (fn? (var-get v))])) (filter second) (map first))
+
+;;  create a big map and convert it to sorted-map
+(def m (->> (map (fn [x y] [x y]) (range 0 10000) (range 1 10001)) (reduce #(apply assoc! %1 %2) (transient {})) persistent!))
+(def sm (apply sorted-map (apply concat m)))
+
+;; take a sorted map, subtract previous value from each next but first, and keep it sorted map:
+;; TODO are we guaranteed to get (seq sm) in the sorted-map order?
+(->> (zipmap (keys m) (into [(val (first m))] (let [v (vals m)] (map - (rest v) v)))) (apply concat) (apply sorted-map))

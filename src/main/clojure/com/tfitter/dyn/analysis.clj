@@ -1,20 +1,8 @@
 ;; used to be (sort (vec m)) before we switched to our new assoc-in-with,
 ;; which uses (sorted-map)
 ;; (defn nondecreasing-map-pairs? [m] (nondecreasing-sparse? (sort (vec m))))
-(defn nondecreasing-map-pairs? [m] (nondecreasing-sparse? (vec m)))
-(defn increasing-map-pairs? [m]    (increasing-sparse? (vec m)))
-(defn nonincreasing-map-pairs? [m] (nonincreasing-sparse? (vec m)))
-(defn decreasing-map-pairs? [m]    (decreasing-sparse? (vec m)))
 
-(defn filter-nondecr-days [m] (filter (fn [[_ v]] (nondecreasing-map-pairs? v)) m))
-(defn filter-incr-days [m]    (filter (fn [[_ v]] (increasing-map-pairs? v)) m))
-(defn filter-nonincr-days [m] (filter (fn [[_ v]] (nonincreasing-map-pairs? v)) m))
-(defn filter-decr-days [m]    (filter (fn [[_ v]] (decreasing-map-pairs? v)) m))
-
-(defn filter-n-days [ipr n] (filter (fn [[_ v]] (>= (count v) n)) ipr))
-(defn count-n-days  [ipr n] (count (filter-n-days ipr n)))
-
-(def ipr (filter-nondec-days dpr))
+(def ipr (filter-incr-days dpr))
 (def ipr-hist (map (partial count-n-days ipr) (drop 3 (range 22))))
 ;; ipr-hist
 ;; (2529 821 317 125 66 41 28 14 8 4 1 0 0 0 0 0 0 0 0)
@@ -49,3 +37,13 @@
 ;; TODO IDEAS
 ;; acceleration, end/start, min 3-10 days
 ;; replier graph annotated by the pagerank of people, at-the-moment and final!
+
+(def cnm (map (fn [[k v]] [k (max-clis-len (vals v))]) dnm))
+(count cnm)
+
+(def anm (->> dnm (map (fn [[k v]] [k (maxxel (vals v))])) (filter (fn [[_ s]] (seq s))) doall))
+(count anm)
+
+(def sanm (sort-by (fn [[_ [x y]]] [(- x) (- y)]) anm))
+
+(def tanm (->> dnm (map (fn [[k v]] [k (maxxel (vals v) 3 :tough)])) (filter (fn [[_ s]] (seq s)))))
