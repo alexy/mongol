@@ -1,6 +1,6 @@
 (ns somnium.congomongo
   (:use [somnium.congomongo])
-  (:import com.mongodb.Bytes))
+  (:import [com.mongodb DBCursor Bytes]))
   
 ; defn doesn't work for java methods, non-functions:  
 ;(defn methornil [x f a] (if a (f x a) x))
@@ -39,13 +39,13 @@
         ]
     (cond
       count? (.getCount n-col n-where n-only)
-      one?   (when-let [m (.findOne
+      one?   (when-let [#^DBCursor m (.findOne
                          #^DBCollection n-col
                          #^DBObject n-where
                          #^DBObject n-only)]
                (let [res (coerce m [:mongo as])]
                		(if dismongo? (dismonge res) res)))
-      :else  (when-let [m (->  #^DBCollection n-col
+      :else  (when-let [#^DBCursor m (->  #^DBCollection n-col
       						   (.find 
                                #^DBObject n-where
                                #^DBObject n-only)
@@ -95,7 +95,7 @@
 		  [dismongo args]  (bool-arg args :dismongo)
 		  [keys args]      (val-arg  args :keys)
 		  ; TODO may add :only keys to args for fetch:
-		  cursor (apply fetch (concat args [:as :cursor]))		  
+		  #^DBCursor cursor (apply fetch (concat args [:as :cursor]))		  
 		  res (transient [])
 		]
 	(loop [i 0]
@@ -120,7 +120,7 @@
 		  quant (or quant 1000000)
 		  [keys args]      (val-arg  args :keys)
 		  ; TODO may add :only keys to args for fetch:
-		  cursor (apply fetch (concat args [:as :cursor]))		  
+		  #^DBCursor cursor (apply fetch (concat args [:as :cursor]))		  
 		]
 	(loop [i 0 res (transient {})]
 	  (if (.hasNext cursor)
