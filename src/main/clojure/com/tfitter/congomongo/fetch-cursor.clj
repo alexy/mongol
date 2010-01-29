@@ -100,17 +100,17 @@
 		]
 	(loop [i 0]
 	  (when (.hasNext cursor)
-	  	(let [m (-> cursor .next .toClojure)
+	  	(let [m (-> cursor #^ClojureDBObject (.next) .toClojure)
 		  	m (if dismongo (dissoc m :_id :_ns) m)
 		  	m (if keys (map #(m %) keys) m)
 		  	]
 		 (conj! res m))
 		 (when (and quant (= (mod i quant) 0)) 
 			(.print System/err (str " " (quot i quant))))
-			(recur (inc i))))
+			(recur (inc i))))l
 	  (persistent! res)))
 
-(defn fetch-graph 
+(defn fetch-graph-xyz 
 	"get cursor from fetch and conj with transients; 
 	 TODO push quant, dismongo and keys to fetch?"
 	[& args]
@@ -136,3 +136,37 @@
 			(.print System/err (str " " (quot i quant))))
 		 (recur (inc i) (assoc! res x yz)))
 	  (persistent! res)))))
+	  
+(defn sort-map
+  "convert a map to a sorted map and subtract each prev val from next"
+  [m & [unkeyword]]
+  (let [s
+    (if unkeyword
+        (let [k (->> m keys (map #(Integer/parseInt (name %))))
+              v (vals m)]
+        (interleave k v))
+        (apply concat m))]
+    (apply sorted-map s)))
+    
+(defn fetch-graph-xy 
+	"get cursor from fetch and conj with transients; 
+	 TODO push quant, dismongo and keys to fetch?"
+	[& args]
+	; (println args)
+	(let [
+		  [quant args]	   (val-arg  args :progress) 
+		  quant (or quant 1000000)
+		  [keys args]      (val-arg  args :keys)
+		  [yint args]      (bool-arg args :yint)
+		  #^DBCursor cursor (apply fetch (concat args [:as :cursor]))		  
+		]
+	(loop [i 0 res (transient {})]
+	  (if (.hasNext cursor)
+	  	(let [m (-> cursor #^ClojureDBObject (.next) .toClojure)
+		  	[x y] (map #(m %) keys)
+        y (if yint (sort-map y :unkeyword) y)
+		  	]
+		 (when (and quant (= (mod i quant) 0)) 
+			(.print System/err (str " " (quot i quant))))
+		 (recur (inc i) (assoc! res x y)))
+	  (persistent! res)))))	   
