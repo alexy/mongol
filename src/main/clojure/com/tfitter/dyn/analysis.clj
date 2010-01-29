@@ -41,9 +41,12 @@
 (def cnm (map (fn [[k v]] [k (max-clis-len (vals v))]) dnm))
 (count cnm)
 
-(def anm (->> dnm (map (fn [[k v]] [k (maxxel (vals v))])) (filter (fn [[_ s]] (seq s))) doall))
+;; (filter (fn [[_ s]] (seq s)))
+(def anm (->> dnm (map (fn [[k v]] [k (maxxel (vals v))])) 
+  (filter #(seq (second s))) doall))
 (count anm)
 
 (def sanm (sort-by (fn [[_ [x y]]] [(- x) (- y)]) anm))
 
-(def tanm (->> dnm (map (fn [[k v]] [k (maxxel (vals v) 3 :tough)])) (filter (fn [[_ s]] (seq s)))))
+(def tanm (->> dnm (map (fn [[k v]] [k (maxxel (vals v) 3 :tough)])) 
+  (filter #(seq (second s))) doall))

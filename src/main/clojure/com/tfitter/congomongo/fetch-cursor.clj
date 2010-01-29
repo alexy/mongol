@@ -119,14 +119,17 @@
 		  [quant args]	   (val-arg  args :progress) 
 		  quant (or quant 1000000)
 		  [keys args]      (val-arg  args :keys)
+		  [yint args]      (bool-arg args :yint)
 		  ; TODO may add :only keys to args for fetch:
 		  #^DBCursor cursor (apply fetch (concat args [:as :cursor]))		  
 		]
 	(loop [i 0 res (transient {})]
 	  (if (.hasNext cursor)
-	  	(let [m (-> cursor .next .toClojure)
+      ;; NB need to make .next a list to apply type hint
+	  	(let [m (-> cursor #^ClojureDBObject (.next) .toClojure)
 		  	[x y z] (map #(m %) keys)
-		  	rx (res x)
+		  	y (if yint (Integer/valueOf y) y) 
+		  	rx  (or (res x) (if yint (sorted-map) {}))
 		  	yz (assoc rx y z)
 		  	]
 		 (when (and quant (= (mod i quant) 0)) 
