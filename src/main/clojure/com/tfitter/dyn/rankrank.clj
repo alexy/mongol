@@ -21,8 +21,7 @@
     ))
     
 (defn ranked-days
-  "replace rank for each day by its position in order, desc
-  TODO add progress"
+  "replace rank for each day by its position in order, desc"
   [dpr & [quant]]
   (let [quant (or quant 1000000)
     [unsorted _] (->> dpr (reduce (fn [theres [user days]] 

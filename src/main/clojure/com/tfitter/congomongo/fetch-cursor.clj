@@ -1,6 +1,8 @@
 (ns somnium.congomongo
   (:use [somnium.congomongo])
-  (:import [com.mongodb DBCursor Bytes]))
+  (:import 
+    [somnium.congomongo ClojureDBObject]
+    [com.mongodb DBCursor Bytes]))
   
 ; defn doesn't work for java methods, non-functions:  
 ;(defn methornil [x f a] (if a (f x a) x))
@@ -65,8 +67,8 @@
 (defn find-seq [s e] 
 	((apply hash-map (interleave s (iterate inc 0))) e))
 	
-(defn without [s n & k]
-	(let [len (or (first k) 1)]
+(defn without [s n & [k]]
+	(let [len (or k 1)]
 	(concat (take n s) (drop (+ n len) s))))
 	
 (defn pos-arg [s arg]
@@ -128,9 +130,38 @@
       ;; NB need to make .next a list to apply type hint
 	  	(let [m (-> cursor #^ClojureDBObject (.next) .toClojure)
 		  	[x y z] (map #(m %) keys)
-		  	y (if yint (Integer/valueOf y) y) 
+        ;; Integer/valueOf couldn't be resolved by w-o-reflection!
+		  	y (if yint (Integer/parseInt y) y) 
 		  	rx  (or (res x) (if yint (sorted-map) {}))
 		  	yz (assoc rx y z)
+		  	]
+		 (when (and quant (= (mod i quant) 0)) 
+			(.print System/err (str " " (quot i quant))))
+		 (recur (inc i) (assoc! res x yz)))
+	  (persistent! res)))))
+	  
+(defn fetch-day-triples 
+	"get cursor from fetch and conj with transients; 
+	 TODO push quant, dismongo and keys to fetch?"
+	[& args]
+	; (println args)
+	(let [
+		  [quant args]	   (val-arg  args :progress) 
+		  quant (or quant 1000000)
+		  [keys args]      (val-arg  args :keys)
+		  [yint args]      (bool-arg args :yint)
+		  ; TODO may add :only keys to args for fetch:
+		  #^DBCursor cursor (apply fetch (concat args [:as :cursor]))		  
+		]
+	(loop [i 0 res (transient {})]
+	  (if (.hasNext cursor)
+      ;; NB need to make .next a list to apply type hint
+	  	(let [m (-> cursor #^ClojureDBObject (.next) .toClojure)
+		  	[x y z] (map #(m %) keys)
+        ;; Integer/valueOf couldn't be resolved by w-o-reflection!
+		  	y (if yint (Integer/parseInt y) y) 
+		  	rx (or (res x) (transient []))
+		  	yz (conj! rx [y z])
 		  	]
 		 (when (and quant (= (mod i quant) 0)) 
 			(.print System/err (str " " (quot i quant))))

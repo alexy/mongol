@@ -67,7 +67,7 @@
 (use '(incanter core stats charts))
 
 ;; print local vars which are fns:
-(->> (ns-interns *ns*) (map (fn [[k v]] [k (fn? (var-get v))])) (filter second) (map first))
+(->> (ns-interns *ns*) (filter (fn [[k v]] (.isBound v))) (map (fn [[k v]] [k (fn? (var-get v))])) (filter second) (map first))
 
 ;;  create a big map and convert it to sorted-map
 (def m (->> (map (fn [x y] [x y]) (range 0 10000) (range 1 10001)) (reduce #(apply assoc! %1 %2) (transient {})) persistent!))
