@@ -37,9 +37,11 @@
 (defn sort-diff-map
   "convert a map to a sorted map and subtract each prev val from next"
   [m & [unkeyword diff]]
-  (let [s
+  (let [
+    unstring (= unkeyword :unstring)
+    s
     (if unkeyword
-        (let [k (->> m keys (map #(Integer/parseInt (name %))))
+        (let [k (->> m keys (map #(Integer/parseInt (if unstring % (name %)))))
               v (vals m)]
         (interleave k v))
         (apply concat m))
