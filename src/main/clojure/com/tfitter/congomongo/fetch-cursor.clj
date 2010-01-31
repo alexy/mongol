@@ -88,12 +88,10 @@
 		[nil s])))
 
 (defn fetch-fast 
-	"get cursor from fetch and conj with transients; 
-	 TODO push quant, dismongo and keys to fetch?"
+	"get cursor from fetch and conj with transients; TODO push quant, dismongo and keys to fetch?"
 	[& args]
 	; (println args)
-	(let [
-		  [quant args]	   (val-arg  args :progress)    
+	(let [[quant args]	   (val-arg  args :progress)    
 		  [dismongo args]  (bool-arg args :dismongo)
 		  [keys args]      (val-arg  args :keys)
 		  ; TODO may add :only keys to args for fetch:
