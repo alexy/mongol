@@ -88,12 +88,9 @@
 		[nil s])))
 
 (defn fetch-fast 
-	"get cursor from fetch and conj with transients; 
-	 TODO push quant, dismongo and keys to fetch?"
+	"get cursor from fetch and conj with transients; TODO push quant, dismongo and keys to fetch?"
 	[& args]
-	; (println args)
-	(let [
-		  [quant args]	   (val-arg  args :progress)    
+	(let [[quant args]	   (val-arg  args :progress)    
 		  [dismongo args]  (bool-arg args :dismongo)
 		  [keys args]      (val-arg  args :keys)
 		  ; TODO may add :only keys to args for fetch:
@@ -109,7 +106,7 @@
 		 (conj! res m))
 		 (when (and quant (= (mod i quant) 0)) 
 			(.print System/err (str " " (quot i quant))))
-			(recur (inc i))))l
+			(recur (inc i))))
 	  (persistent! res)))
 
 (defn fetch-graph-xyz 
@@ -138,13 +135,13 @@
 		 (when (and quant (= (mod i quant) 0)) 
 			(.print System/err (str " " (quot i quant))))
 		 (recur (inc i) (assoc! res x yz)))
-	  (persistent! res)))))
+   (persistent! res))
+   )))
 	  
 (defn fetch-day-triples 
 	"get cursor from fetch and conj with transients; 
 	 TODO push quant, dismongo and keys to fetch?"
 	[& args]
-	; (println args)
 	(let [
 		  [quant args]	   (val-arg  args :progress) 
 		  quant (or quant 1000000)
@@ -166,7 +163,18 @@
 		 (when (and quant (= (mod i quant) 0)) 
 			(.print System/err (str " " (quot i quant))))
 		 (recur (inc i) (assoc! res x yz)))
-	  (persistent! res)))))
+		 (do
+		    (.print System/err " sorting days: ")
+	  	  (->> res persistent! (reduce (fn [r [k v]]
+	  	    (let [vlen (count v)] 
+      	    (.print System/err (str " " k)) 
+      	    (assoc! r k (->> v persistent! (sort-by second >) 
+      	        (map (fn [idx [user rank]] 
+      	          [user (double (/ idx vlen))]) (iterate inc 0) 
+      	          ))))) 
+      	      (transient {}))
+      	    persistent!)
+	    )))))
 	  
 (defn sort-map
   "convert a map to a sorted map and subtract each prev val from next"
