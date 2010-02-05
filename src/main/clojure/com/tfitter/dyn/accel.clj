@@ -70,21 +70,29 @@
 ;;   "convert a sper-days vector of day-mention pairs like (([0 2986] [1 3294] [3 4897]) to [2986 3294 0 4897]"
 ;; [pairs])
 
-(defn max-clis-len [s] (->> s clis-reduce (map count) (apply max)))
+(defn max-clis-len [s & [clis]] 
+  (let [clis (or clis clis-decr)] 
+    (->> s clis (map count) (apply max))))
 
 (defn maxxel 
-  "compute maximum acceleration, taking into account only subsequences of length greater than n"
-  [s & [n tough]]
+  "compute maximum acceleration, taking into account only subsequences of length greater than n
+  TODO detect clis as decr and auto-invert"
+  [s & [clis n invert? tough?]]
   (let [
+    clis (or clis clis-incr)
     n (or n 3)]
-    (->> s clis-reduce (filter #(>= (count %) n))
+    (->> s clis (map #(drop-while zero? %)) (filter #(>= (count %) n))
     (map #(let [
       ;; usually the first element is 1, so :tough skips that
       ;; and gets acceleration as a ratio not to 1 but larger
-      fst (if tough (second %) (first %))
-      lst (last %)] 
-      [(/ lst fst) (count %)]))
+      fst (if tough? (second %) (first %))
+      lst (last %) 
+      [numer denom] (if invert? [fst lst] [lst fst])]
+      ;; 0 shouldn't sneak in after drop-while above, but still...
+      (when (not= denom 0) [(double (/ numer denom)) (count %)])
+      ))
     ;; max-key chokes on [], buggy?  short-circuit with -?> may help,
     ;; http://richhickey.github.com/clojure-contrib/core-api.html#clojure.contrib.core/-?%3E
-    ((fn [s] (if (empty? s) [] (apply max-key first s))))
+    (filter identity)  ;  or (remove nil?) -- handles false
+    ((fn [s] (if (empty? s) nil (apply max-key first s))))
     )))

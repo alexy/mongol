@@ -12,10 +12,13 @@
   (->> drank (map (fn [[user dayranks]]
     (let [
       davrseq (map (fn [[day rank]]
-        (let [ments (get-in dments [user day])
-          avrank (->> ments keys  ; TODO weigh by vals?
-            (map name) 
-            (map #(get-in drank [% day])) mean)]
+        (let [
+          ments    (get-in dments [user day])
+          dranks   (->> ments keys (map name) (map #(get-in drank [% day])))
+          weights  (vals ments)
+          sumranks (->> (map (fn [k v] (* k v)) dranks weights) (reduce + ))
+          summents (reduce + weights)   
+          avrank (if (> summents 0) (double (/ sumranks summents)) 0.0)]
         [day [rank avrank]])) dayranks)
         ;; (->> davrseq (apply concat) (apply sorted-map))
       davranks (into (sorted-map) davrseq)

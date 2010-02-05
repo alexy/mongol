@@ -2,8 +2,7 @@
 
 (use 'clojure.contrib.seq-utils)
 
-
-(defn clis-partition-wrong
+(defn- clis-wrong
   "contiguous longest increasing subsequence"
   [s]
   (if (empty? s) nil  ; TODO or [0 0]?
@@ -13,7 +12,8 @@
        (map count) ((fn [v] [(reductions + 0 v) (map inc v)])) 
        (apply zipmap) (apply max-key second)))))
 
-(defn clis-reduce [s] 
+(defn clis  ; clis-reduce
+  [s] 
   (let [[x & xs] s [r zs _] 
     (reduce (fn [[r zs z] e] 
       (if (< z e) [r (conj zs e) e] [(conj r zs) [e] e])) 
@@ -21,7 +21,9 @@
    
 ;; Meikel Brandmeyer
 ;; http://groups.google.com/group/clojure/browse_thread/thread/e28f2687e00f9694   
-(defn clis-lazy 
+;; TODO clis-lazy doesn't generalize to clis [pred coll] 
+;; by simply replacung <= with pred as clis-reduce does             
+(defn clis  ; clis-lazy 
          [coll] 
          (letfn [(step 
                    [prev s] 
@@ -33,3 +35,15 @@
            (lazy-seq 
              (when-let [s (seq coll)] 
                (step [] s))))) 
+
+(defn clis-pred  
+  [pred s]
+  (let [[x & xs] s [r zs _] 
+    (reduce (fn [[r zs z] e] 
+      (if (pred z e) [r (conj zs e) e] [(conj r zs) [e] e])) 
+      [[] [x] x] xs)] (conj r zs)))
+                
+(def clis-incr    (partial clis-pred <))
+(def clis-nondecr (partial clis-pred <=))
+(def clis-nonincr (partial clis-pred >=))
+(def clis-decr    (partial clis-pred >))

@@ -90,7 +90,17 @@
   (.println System/err)
   result))
 
-  
+;; from sorted-seq-merge.clj
+(defn sorted-date-seq-merge
+  "Lazily merge two sorted seqs into a single sorted seq"
+  [a b]
+  (lazy-seq
+    (cond
+      (empty? a) b
+      (empty? b) a
+      (< (.compareTo (first a) (first b)) 0) (cons (first a) (sorted-date-seq-merge (rest a) b))
+      :else                   (cons (first b) (sorted-date-seq-merge a (rest b))))))
+              
 (defn lc-dt-reps
   "lowercase single from-to adjacency list; can also be used for time conversions, if needed"
   [reps]
