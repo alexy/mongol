@@ -1,6 +1,6 @@
 ;; contiguous longest increasing subsequence
 
-(use 'clojure.contrib.seq-utils)
+;; (use 'clojure.contrib.seq-utils)
 
 (defn- clis-wrong
   "contiguous longest increasing subsequence"

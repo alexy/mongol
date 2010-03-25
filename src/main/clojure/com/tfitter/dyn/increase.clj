@@ -8,7 +8,8 @@
       twice-wider? twice-higher?] 
      :or {clis clis-decr minsublen 3}} mapargs
    ;; (print roll? pair? clis tough? nosort?)
-      maxxel? (= roll? :maxxel)
+      maxxel?   (= roll? :maxxel)
+      growfall? (= roll? :growfall)
       valfn 
         (if pair? 
           (if (= pair? :first) 
@@ -31,13 +32,21 @@
                 (->> (clis ranks) (map count) (apply max))
             maxxel?
                 (maxxel ranks clis minsublen invert?)
-            (= roll? :growfall)
+            growfall?
                 (growfall ranks twice-wider? twice-higher?)
             )]
             [user res]))))
-      clens (if maxxel? (filter second clens) clens)
+      clens (cond
+        maxxel? 
+          (filter second clens)
+        ;; growfall used to return nil for indeterminate, now 0.0,
+        ;; so it always returns numbers meaningfully sortable:
+        ;; positive is growth, negative decline, zero hard to tell
+        ;; growfall? (remove (comp nil? second) clens) 
+        :else
+          clens)
       ]
-      (if (or (= roll? :growfall) (not roll?) nosort?) 
+      (if (or (not roll?) nosort?) 
         clens
         (if maxxel? 
           (sort-by (fn [[_ [x y]]] 
