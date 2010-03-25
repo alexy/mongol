@@ -50,3 +50,6 @@
 
 (def tanm (->> dnm (map (fn [[k v]] [k (maxxel (vals v) 3 :tough)])) 
   (filter #(seq (second s))) doall))
+
+;; plotting in incanter running in vnc on rocket, here also filtering a part
+(let [xy points-nments-prank-10 xy (filter (fn [[x y]] (< x 250)) xy) x (map first xy) y (map second xy)] (view (scatter-plot x y)))

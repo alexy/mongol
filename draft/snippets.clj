@@ -76,3 +76,10 @@
 ;; take a sorted map, subtract previous value from each next but first, and keep it sorted map:
 ;; TODO are we guaranteed to get (seq sm) in the sorted-map order?
 (->> (zipmap (keys m) (into [(val (first m))] (let [v (vals m)] (map - (rest v) v)))) (apply concat) (apply sorted-map))
+
+;; finding the pattern of a star working the fans
+
+user=> (->> (map (fn [[day reps]] [day (reps :donniesangel)]) (dreps "donniewahlberg")) (remove (comp nil? second)))
+([11 1] [32 1])
+user=> (->> (map (fn [[day reps]] [day (reps :donniewahlberg)]) (dreps "donniesangel")) (remove (comp nil? second)))
+([18 2] [19 3] [20 1] [22 1] [23 1] [24 2] [26 2] [27 1] [28 1] [30 2] [31 2] [32 1] [33 1])

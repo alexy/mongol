@@ -25,3 +25,74 @@ mongol.repliers=> (davrank "dpp")
 {3 [648949 396647.0], 4 [888371 0.0], 5 [978474 0.0], 6 [456329 18972.0], 7 [589739 0.0], 8 [637299 0.0], 9 [734010 0.0], 10 [803623 0.0], 
 11 [869094 0.0], 12 [875894 0.0], 13 [836738 0.0], 14 [930399 0.0], 15 [971442 0.0], 16 [988403 0.0], 17 [1048402 0.0], 18 [1120804 0.0], 1
 9 [1114090 0.0], 20 [1151773 0.0], 21 [1166235 0.0]}
+
+;; dr-star-rank
+justinbieber =>
+,(0.6197258124125861,0.5575966354511003,0.5424052148626077,0.5383237915056115,0.5221303226325452,0.537596734779112,0.4977620469594651,0.499020072285723,0.4478677241839154,0.48043019888755745,0.4674486889052287,0.47159988451518087,0.4796893840721758,0.5037635546256732,0.5083166931722443,0.3929166623356133,0.48363617115023266,0.4406010830691825,0.44937061155687985,0.5047682972129569,0.44991253022691446,0.4219551034008907)
+
+;; stored as drclen, this is wmenstar, average real rank weighted by the number of tweets from each person per day, segmented by clis-decr,
+;; with the maximum run taken
+
+(def drank-clis-decr (clis-drank re-days :roll? :maxlen))
+
+user=> (take 10 drank-clen-desc)
+(["muse" 22] ["theellenshow" 22] ["nytimes" 22] ["ebertchicago" 21] ["kpereira" 21] ["mileycyrusnet" 21] ["mikeexpo" 21] ["mariliaruiz" 21] ["taberna,de_moe" 21] ["kekeinaction" 21])
+
+(def dwrank-clis-incr (clis-drank re-days :maxlen clis-incr))
+(def dwrank-clen-desc (sort-by second > drank-clis-incr))
+
+(def dirank-clis-decr (clis-drank drank :maxlen))
+(def dirank-clen-desc (sort-by second > drank-clis-decr))
+
+user=> (take 10 dirank-clen-desc)
+(["fredgol9" 17] ["rockstargames" 17] ["nihon_bot" 17] ["mileycyrusnet" 15] ["chetan_bhagat" 15] ["puku_puku" 15] ["jbieber_fever24" 14] ["flpr" 14] ["yumehina" 14] ["estoniabot" 14])
+
+mongol.repliers=> (time (def wmenstar-clen-decr (clis-drank wmenstar :roll? :maxlen :pair? :second)))
+mongol.repliers=> (take 10 wmenstar-clen-decr)
+(["donniewahlberg" 11] ["camellia" 11] ["dubhghall" 10] ["bowwow614" 9] ["faydra_deon" 9] ["cooku" 9] ["extremely_juicy" 9] ["ares3d" 9] ["eddiegrayy" 9] ["itsue_1a" 9])
+mongol.repliers=> (time (def wmenstar-clen-incr (clis-drank wmenstar :roll? :maxlen :pair? :second :clis clis-incr)))
+mongol.repliers=> (take 10 wmenstar-clen-incr)
+(["gm_web" 18] ["dealstobuy" 17] ["emanuelrizon" 17] ["tonyageh" 16] ["alexanderfog" 16] ["sherryonline4u" 16] ["nichopoulouzo" 15] ["heyysusmitaa" 15] ["jornal_record" 15] ["abolapt" 15])
+
+;; NB histogram the above clens!
+
+mongol.repliers=> (time (def wrank-ratio (clis-drank wmenstar :ratio :first)))
+mongol.repliers=> (take 10 wrank-ratio)
+(["onhae" 1979.9020917528683] ["kitosrd" 605.9666708835339] ["lins_a15" 560.6572408616712] ["andykanefield" 501.50261643382146] ["leehteixeira_" 439.7380246000087] ["be3n" 430.0771838855304] ["nadiasoma" 391.0394456649083] ["mrrichyoung" 376.59337117260253] ["abqtupperware" 376.2549033315411] ["fitl7" 357.9012994498925])
+
+mongol.repliers=> (time (def wstar-ratio (clis-drank wmenstar :ratio :second)))
+mongol.repliers=> (take 10 wstar-ratio)
+(["jaq24" 156100.55983485506] ["gabiassmann" 46646.22994317674] ["queenmalikab" 32822.96963683567] ["mrkonnectionz" 31127.375024095196] ["benghele" 14421.798275840765] ["lala_noleto" 14153.193785027517] ["chollosocksgirl" 12262.767699055545] ["jadehot" 9449.162285699633] ["wesbuleriano" 8685.0583907638] ["mannygforever" 8420.673951938441])
+
+;; acceleration by own rank:
+
+(time (def wrank-axel-decr-3 (clis-drank wmenstar :pair? :first :roll? :maxxel :invert? true)))
+mongol.repliers=> (take 10 wrank-axel-decr-3)
+(["polvalente" [134300.74642867612 6]] ["leobarcellos" [112492.16831570824 4]] ["natyperdomo" [79258.4669359597 4]] ["theresamcardle" [63282.167932528355 6]] ["ricardo_tadeu" [41208.87105010808 3]] ["alfiehitchcock" [37199.56096834167 10]] ["jc_schuster" [30994.582739730944 4]] ["carlaciccarelli" [30102.283250492634 3]] ["drosa_shannon" [19813.550760068076 4]] ["carolbastos_" [17159.656485898726 8]])
+
+mongol.repliers=> (time (def wrank-axel-decr-4 (clis-drank wmenstar :pair? :first :roll? :maxxel :invert? true :minsublen 4)))
+mongol.repliers=> (take 10 wrank-axel-decr-4)
+(["polvalente" [134300.74642867612 6]] ["leobarcellos" [112492.16831570824 4]] ["natyperdomo" [79258.4669359597 4]] ["theresamcardle" [63282.167932528355 6]] ["alfiehitchcock" [37199.56096834167 10]] ["jc_schuster" [30994.582739730944 4]] ["drosa_shannon" [19813.550760068076 4]] ["carolbastos_" [17159.656485898726 8]] ["bunito07" [12882.86935051968 4]] ["dollbabyv" [10800.683853302524 4]])
+
+;; acceleration by star-rank, with maxxel before drop-while zero?, simply dropping 0-started subseqs:
+mongol.repliers=> (time (def wstar-axel-decr-3 (clis-drank wmenstar :pair? :second :roll? :maxxel :invert? true)))
+mongol.repliers=> (take 10 wrank-axel-decr-3)
+(["joycepascowitch" [207773.43624757472 4]] ["biia_assis" [185685.482651769 3]] ["minni_w" [152842.83805066883 3]] ["biofa" [150704.61084932814 3]] ["marcelopanizza" [132775.71140550353 4]] ["janacavalcanti" [121893.20966984319 4]] ["baybgyrl88" [61659.870613647676 3]] ["iluvddubsomuch" [57383.41730255576 3]] ["pinkywainer" [36403.60614784597 3]] ["ontddubtrouble" [31056.519233674186 3]])
+
+mongol.repliers=> (time (def wstar-axel-decr-4 (clis-drank wmenstar :pair? :second :roll? :maxxel :invert? true :minsublen 4)))
+mongol.repliers=> (take 10 wstar-axel-decr-4)
+(["joycepascowitch" [207773.43624757472 4]] ["marcelopanizza" [132775.71140550353 4]] ["janacavalcanti" [121893.20966984319 4]] ["rafa_consentino" [24387.422741755676 5]] ["mynadias" [18857.779187010525 4]] ["dejdia" [14122.537871391269 4]] ["lisa_nova" [13425.948168109135 4]] ["stephjonesmusic" [12126.725604089632 5]] ["brunaodog" [9499.95515321749 4]] ["kiruba" [9097.672669009748 7]])
+
+NB: do majority of wrank/wstars grow or fall?  metric: total number of growth days vs fall days.
+soft measure: simple majority
+harder: 2/3 either way, now with neutral bucket
+hardest: out of those growing, how many grew more than twice?
+
+;; plain growfall, without twice-wider
+(time (def drrank-grow (clis-drank drrank :roll? :growfall)))
+user=> (take 10 drrank-grow)
+(["onhae" 1979.9020917528683] ["kitosrd" 605.9666708835339] ["lins_a15" 560.6572408616712] ["andykanefield" 501.50261643382146] ["leehteixeira_" 439.7380246000087] ["be3n" 430.0771838855304] ["nadiasoma" 391.0394456649083] ["mrrichyoung" 376.59337117260253] ["abqtupperware" 376.2549033315411] ["fitl7" 357.9012994498925])
+
+(def drrank-grow (clis-drank drrank :roll? :growfall :twice-wider? true))
+user=> (take 10 drrank-grow)
+(["onhae" 1979.9020917528683] ["kitosrd" 605.9666708835339] ["lins_a15" 560.6572408616712] ["andykanefield" 501.50261643382146] ["leehteixeira_" 439.7380246000087] ["be3n" 430.0771838855304] ["nadiasoma" 391.0394456649083] ["mrrichyoung" 376.59337117260253] ["abqtupperware" 376.2549033315411] ["fitl7" 357.9012994498925])

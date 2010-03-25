@@ -22,6 +22,7 @@
 (defn third [x] (x 2))
 (def xy { :x (map second upn) :y (map third upn) })
 
+;; save prankpertwits -- triples, so mongo-store-pairs won't do as is
 (time 
   (doseq [x (partition-all 10000 
     (map (fn [[user numtwits score]] { :user user :numtwits numtwits :score score }) upn))] 
