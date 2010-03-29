@@ -2,6 +2,9 @@
 (use '[cupboard.bdb.je-marshal :as jem])
 (import '[com.sleepycat.je DatabaseEntry]) 
 
+(defn err [s]
+  (doto System/err (.print s) .flush))
+  
 (def *num-agents* 8)
 
 (defstruct id-chunk :id :chunk)
@@ -19,7 +22,7 @@
   (let [chunk (int (/ n m))] 
     (loop [r [] prev 0 curr chunk] 
       (if (> curr n) 
-        (conj r n)
+        (conj r (dec n))
         (recur (conj r prev) curr (+ curr chunk))))))
         
 (defn do-range [old-agt-val db [begin beyond] & [progress]]
@@ -34,11 +37,11 @@
                the-pair (je/db-cursor-search curs begin) 
                i 0]
                (let [the-key (first the-pair)]
-                  (when (and progress (= 0 (mod i progress))) (print id)) 
-                  (if (or (nil? the-key) (>= the-key beyond))
+                  (when (and progress (= 0 (mod i progress))) (err id)) 
+                  (if (or (nil? the-key) (>= (compare the-key beyond) 0))
                     (struct id-chunk id (persistent! res))
                     (recur (conj! res the-pair) 
-                           (je/db-cursor-next curs :key dbe-key :data dbe-data) 
+                           (je/db-cursor-next curs :key dbe-key :data dbe-data)
                            (inc i))))))))
   
 (defn do-ranges [db-name db-env numbered-keys agents & [progress]]
@@ -70,11 +73,17 @@
             (recur (conj! res the-pair) (je/db-cursor-next c))
             )))]
       (into {} resvec))))
-      
+
 (defn agents-get-db [agents db-env db-main-name & [progress]]
   (let [db-keys-name (str (db-main-name "-keys"))
         numbered-keys (get-numbered-keys db-env db-keys-name)]
     (reset-agents agents)
     (do-ranges db-main-name db-env numbered-keys agents progress)))
-
-    
+ 
+;; (def je (je/db-env-open "je" :read-only true)) 
+;; (.getDatabaseNames @(:env-handle je))
+;; (time (def *numbered-keys* (get-numbered-keys je "dments-keys")))
+;; (def bdb-g1 (je/db-open je "g1" :read-only true))
+;; (.count @(:db-handle bdb-g1))
+;; (->> (do-range (struct id-chunk 99 []) bdb-g1 ["0" "00023"] 2) :chunk)
+;; (time (def dments (do-ranges bdb-g1 *numbered-keys* *bdb-agents* 10000)))

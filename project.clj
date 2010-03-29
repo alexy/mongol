@@ -10,5 +10,7 @@
     [net.sf.jung/jung-api "2.0"]
     [net.sf.jung/jung-algorithms "2.0"]
     [net.sf.jung/jung-graph-impl "2.0"]
-    [joda-time "1.6"]]
+    [joda-time "1.6"]
+    [cupboard "1.0-SNAPSHOT"]
+  ]
   :main hello)

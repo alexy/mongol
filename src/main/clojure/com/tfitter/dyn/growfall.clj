@@ -31,11 +31,11 @@
     ) [0 0 x] xs)]
     (cond 
       (>= up (if twice-wider? (* down 2) down))
-        (when (or (not twice-higher?) (twice-more-seq? s)) 
-          (change-ratio s))
+        (if (or (not twice-higher?) (twice-more-seq? s)) 
+          (change-ratio s) 0.0)
       (>= down (if twice-wider? (* up 2) up))
-        (when (or (not twice-higher?) (twice-more-seq? s :invert)) 
-          (change-ratio s :invert))
+        (if (or (not twice-higher?) (twice-more-seq? s :invert)) 
+          (change-ratio s :invert) 0.0)
       :else
        nil
       )  
