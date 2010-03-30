@@ -2,19 +2,21 @@
 (use '[cupboard.bdb.je-marshal :as jem])
 (import '[com.sleepycat.je DatabaseEntry]) 
 
-(defn err [s]
-  (doto System/err (.print s) .flush))
-  
-(def *num-agents* 8)
+(defn err [ & args]
+  (doto System/err (.print   (apply str args)) .flush))
 
+(defn errln [ & args]
+  (doto System/err (.println (apply str args)) .flush))
+  
 (defstruct id-chunk :id :chunk)
 
-(def *bdb-agents* (map #(agent (struct id-chunk % [])) (take *num-agents* (iterate inc 0))))
+;; (def *num-agents* 8)
+;; (def *bdb-agents* (map #(agent (struct id-chunk % [])) (range *num-agents*)))
   
 (defn reset-agents [agents]
-  (map #(send % (fn [_] nil)) agents)
+  (let [agents (map #(send % (fn [_] nil)) agents)]
   (apply await agents)
-  (err "agents reset"))
+  (err "agents reset")))
   
 (defn end-positions [n m]
   "break the sequence 0..n into m integral pieces
@@ -52,19 +54,17 @@
       key-ends     (map #(numbered-keys %) pos-ends)
       key-ranges   (partition 2 1 key-ends)
       _            (assert (= (count key-ranges) total-agents))
-      ;; agents       
     ]
     (je/with-db [db db-env db-name]
-      (err (str "starting parallel agent-get of db " db-name))
-      (map #(send %1 do-range db %2 progress) agents key-ranges)
-      (println (str "started " total-agents " agents"))
+      (errln "starting parallel agent-get of db " db-name " with " total-agents " agents")
+      (let [agents (map #(send %1 do-range db %2 progress) agents key-ranges)]
       (apply await agents)
-      (println "finished agents!")
-      (reduce #(into %1 (:chunk @%2)) {} agents))))
+      (errln " finished agents!")
+      (reduce #(into %1 (:chunk @%2)) {} agents)))))
     
 (defn get-numbered-keys [db-env db-name]
   (je/with-db [db db-env db-name]
-    (err (str "getting numbered keys from db " db-name))
+    (errln "getting numbered keys from db " db-name)
     (let [resvec
       (je/with-db-cursor [c db]
         (loop [res (transient []) the-pair (je/db-cursor-next c)]
@@ -72,13 +72,36 @@
             (persistent! res)
             (recur (conj! res the-pair) (je/db-cursor-next c))
             )))]
+      (errln "got " (count resvec) " keys")
       (into {} resvec))))
 
-(defn agents-get-db [agents db-env db-main-name & [progress]]
-  (let [db-keys-name (str (db-main-name "-keys"))
-        numbered-keys (get-numbered-keys db-env db-keys-name)]
-    (reset-agents agents)
+(defn agents-get-db [num-agents db-env db-main-name & [progress]]
+  (let [db-keys-name (str db-main-name "-keys")
+        numbered-keys (get-numbered-keys db-env db-keys-name)
+        agents (map #(agent (struct id-chunk % [])) (range num-agents))]
+    ;; (reset-agents agents)
     (do-ranges db-main-name db-env numbered-keys agents progress)))
+    
+(defn bdb-put-seq [s db-env db-name]
+  (err "writing db " db-name "... ")
+  (je/with-db [db db-env db-name :allow-create true]
+    (doseq [[k v] s] (je/db-put db k v)))
+  (errln "done."))
+
+(defn bdb-put-seq-cursor [s db-env db-name]
+  (err "writing db " db-name "... ")
+  (je/with-db [db db-env db-name :allow-create true]
+    (je/with-db-cursor [curs db]
+      (doseq [[k v] s] (je/db-cursor-put curs k v))))
+  (errln "done."))
+  
+(defn put-db [s db-env db-main-name]
+  (bdb-put-seq s db-env db-main-name)
+  (let [db-keys-name (str db-main-name "-keys")
+    sorted-keys (sort (keys s))
+    numbered-keys (map vector (iterate inc 0) sorted-keys)]
+    (bdb-put-seq numbered-keys db-env db-keys-name)
+    ))
  
 ;; (def je (je/db-env-open "je" :read-only true)) 
 ;; (.getDatabaseNames @(:env-handle je))
