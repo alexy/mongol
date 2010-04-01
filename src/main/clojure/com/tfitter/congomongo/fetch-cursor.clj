@@ -18,7 +18,7 @@
    Optional arguments include
    :where  -> takes a query map
    :only   -> takes an array of keys to retrieve
-   :as     -> what to return, defaults to :clojure, can also be :json or :mongo
+   :as     -> what to return, defaults to :clojure, can also be :json or :mongo or :cursor
    :from   -> argument type, same options as above
    :skip   -> number of records to skip
    :limit  -> number of records to return

@@ -46,8 +46,9 @@
                            (je/db-cursor-next curs :key dbe-key :data dbe-data)
                            (inc i))))))))
   
-(defn do-ranges [db-name db-env numbered-keys agents & [progress]]
+(defn do-ranges [db-name db-env numbered-keys agents get-vector progress]
   (let [
+      into-what    (if get-vector [] {})
       total-keys   (count numbered-keys)
       total-agents (count agents)
       pos-ends     (end-positions total-keys total-agents)
@@ -58,9 +59,10 @@
     (je/with-db [db db-env db-name]
       (errln "starting parallel agent-get of db " db-name " with " total-agents " agents")
       (let [agents (map #(send %1 do-range db %2 progress) agents key-ranges)]
-      (apply await agents)
-      (errln " finished agents!")
-      (reduce #(into %1 (:chunk @%2)) {} agents)))))
+        (apply await agents)
+        (errln " finished agents!")
+        (reduce #(into %1 (:chunk @%2)) into-what agents)
+        ))))
     
 (defn get-numbered-keys [db-env db-name]
   (je/with-db [db db-env db-name]
@@ -75,7 +77,7 @@
       (errln "got " (count resvec) " keys")
       (into {} resvec))))
 
-(defn agents-get-db [num-agents db-env db-main-name & [progress]]
+(defn agents-get-db [num-agents db-env db-main-name & [progress get-vector]]
   (let [db-keys-name (str db-main-name "-keys")
         numbered-keys (get-numbered-keys db-env db-keys-name)
         agents (map #(agent (struct id-chunk % [])) (range num-agents))]
@@ -98,7 +100,8 @@
 (defn put-db [s db-env db-main-name]
   (bdb-put-seq s db-env db-main-name)
   (let [db-keys-name (str db-main-name "-keys")
-    sorted-keys (sort (keys s))
+    the-keys (if (map? s) (keys s) (map first s))
+    sorted-keys (sort the-keys)
     numbered-keys (map vector (iterate inc 0) sorted-keys)]
     (bdb-put-seq numbered-keys db-env db-keys-name)
     ))

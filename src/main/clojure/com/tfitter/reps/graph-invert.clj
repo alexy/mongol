@@ -14,17 +14,17 @@
 ;; chouser inverts the map!
 (let [g {"a" {:b [1 2 3],:c [4 5]}, "d" {:b [2 3], :e [5 6 7]}}] 
   (reduce (fn [m [k2 k1 v]] (assoc m k2 (assoc (m k2 {}) k1 v))) 
-    {} (for [[k1 m] g, [k2 v] m] [k2 k1 v])))
+    {} (for [[k1 m] g [k2 v] m] [k2 k1 v])))
 
 ;; transient at top level:
 (persistent! (let [g {"a" {:b [1 2 3],:c [4 5]}, "d" {:b [2 3], :e [5 6 7]}}] 
   (reduce (fn [m [k2 k1 v]] (assoc! m k2 (assoc (m k2 {}) k1 v))) 
-    (transient {}) (for [[k1 m] g, [k2 v] m] [k2 k1 v]))))
+    (transient {}) (for [[k1 m] g [k2 v] m] [k2 k1 v]))))
 
 ;; chouser -- abysmal timing
 (time (def sper-chouser
   (->>
-    (for [[k1 m] reps, [k2 v] m] [k2 k1 v]) ; stream of edges
+    (for [[k1 m] reps [k2 v] m] [k2 k1 v]) ; stream of edges
     (reduce (fn [m [k2 k1 v]]            ; invert into transient of transients
               (assoc! m k2 (assoc! (m k2 (transient {})) k1 v)))
             (transient {}))
