@@ -1,0 +1,1 @@
+user=> (def a1 (send a1 (fn [_] (->> (fetch :reps :where :dismongo? true) (map (fn [{:keys [user reps]}] [user reps]))))
