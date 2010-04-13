@@ -22,18 +22,18 @@
     (transient {}) (for [[k1 m] g [k2 v] m] [k2 k1 v]))))
 
 ;; chouser -- abysmal timing
-(time (def sper-chouser
-  (->>
-    (for [[k1 m] reps [k2 v] m] [k2 k1 v]) ; stream of edges
-    (reduce (fn [m [k2 k1 v]]            ; invert into transient of transients
-              (assoc! m k2 (assoc! (m k2 (transient {})) k1 v)))
-            (transient {}))
-    persistent!                          ; persistent of transients
-    (reduce (fn [m [k v]]                ; reduce into transient of persistents
-              (assoc! m k (persistent! v)))
-            (transient {}))
-    persistent!))                        ; persistent of persistents
-)
+;; (time (def sper-chouser
+;;   (->>
+;;     (for [[k1 m] reps [k2 v] m] [k2 k1 v]) ; stream of edges
+;;     (reduce (fn [m [k2 k1 v]]            ; invert into transient of transients
+;;               (assoc! m k2 (assoc! (m k2 (transient {})) k1 v)))
+;;             (transient {}))
+;;     persistent!                          ; persistent of transients
+;;     (reduce (fn [m [k v]]                ; reduce into transient of persistents
+;;               (assoc! m k (persistent! v)))
+;;             (transient {}))
+;;     persistent!))                        ; persistent of persistents
+;; )
 
 ;; JonSmoth inverts the map!
 ;; http://paste.lisp.org/display/92238
