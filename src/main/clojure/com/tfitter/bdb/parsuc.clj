@@ -82,7 +82,7 @@
         numbered-keys (get-numbered-keys db-env db-keys-name)
         agents (map #(agent (struct id-chunk % [])) (range num-agents))]
     ;; (reset-agents agents)
-    (do-ranges db-main-name db-env numbered-keys agents progress)))
+    (do-ranges db-main-name db-env numbered-keys agents get-vector progress)))
     
 (defn bdb-put-seq [s db-env db-name]
   (err "writing db " db-name "... ")
