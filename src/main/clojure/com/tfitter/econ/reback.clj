@@ -10,9 +10,10 @@
     total (count tops)
     half (/ total 2) 
     front (->> tops 
-      (map (fn [[user num]] 
-      (let [back (user-reps (keyword user))] [user (count back)])))
-      (remove (fn [[user num]] (zero? num)))
+      (map (fn [i [user num]]
+      (let [back (user-reps (keyword user))] [i user (count back)])) (iterate inc 0))
+      (remove (fn [[i user num]] (zero? num)))
+      (map first)
       (filter #(< % half))
       count)]
     (/ front total)))
