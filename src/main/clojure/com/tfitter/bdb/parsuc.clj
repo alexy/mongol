@@ -1,5 +1,5 @@
-(use '[cupboard.bdb.je :as je])
-(use '[cupboard.bdb.je-marshal :as jem])
+(require '[cupboard.bdb.je :as je])
+(require '[cupboard.bdb.je-marshal :as jem])
 (import '[com.sleepycat.je DatabaseEntry]) 
 
 (defn err [ & args]
@@ -79,6 +79,7 @@
 
 (defn agents-get-db [num-agents db-env db-main-name & [progress get-vector]]
   (let [db-keys-name (str db-main-name "-keys")
+    ;; TODO don't read all numbered keys in, get just the range ends!
         numbered-keys (get-numbered-keys db-env db-keys-name)
         agents (map #(agent (struct id-chunk % [])) (range num-agents))]
     ;; (reset-agents agents)
@@ -113,3 +114,37 @@
 ;; (.count @(:db-handle bdb-g1))
 ;; (->> (do-range (struct id-chunk 99 []) bdb-g1 ["0" "00023"] 2) :chunk)
 ;; (time (def dments (do-ranges bdb-g1 *numbered-keys* *bdb-agents* 10000)))
+
+
+(defn bdb-put-triples [graph db-env db-name]
+  (err "writing trilpes db " db-name "...")
+  (je/with-db [db db-env db-name :allow-create true]
+    (doseq [[k1 v1] graph]
+      (doseq [[k2 v2] v1] 
+        (je/db-put db [k1 k2] v2))))
+  (errln "done."))
+
+
+(defn bdb-put-triple-keys [graph db-env db-name]
+  (err "writing trilpe keys db " db-name "...")
+  (je/with-db [db db-env db-name :allow-create true]
+    (reduce (fn [i [k1 v1]] (reduce (fn [i [k2 _]]
+        (je/db-put db i [k1 k2]) (inc i)) i v1))
+        0 graph)) 
+  (errln "done."))
+
+    
+(defn put-triples-db [graph db-env db-main-name]
+  (bdb-put-triples graph db-env db-main-name)
+  (bdb-put-triple-keys graph db-env (str db-main-name "-keys")))
+
+(defn get-triples-db [num-agents db-env db-main-name & [progress]]
+  (let [triples (agents-get-db num-agents db-env db-main-name progress :get-vector)]
+    (->> triples
+      (reduce (fn [[res [[k1 k2] v]]] (let [m (res k1)] 
+        (assoc! res k1 
+          (if m (update-in m [k2] #(conj (or % []) v)) 
+                (hash-map k1 (hash-map k2 v)))))) 
+          (transient {}))
+      persistent!)))
+    

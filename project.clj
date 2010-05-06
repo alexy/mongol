@@ -1,9 +1,9 @@
-(defproject mongol "0.1"
+(defproject mongol "1.0"
   :repositories {"incanter" "http://repo.incanter.org"}
   :description "The Incanting Mathematical Mongol"
   :dependencies [
-    [org.clojure/clojure "1.1.0-master-SNAPSHOT"]
-    [org.clojure/clojure-contrib "1.1.0-master-SNAPSHOT"]
+    [org.clojure/clojure "1.1.0"]
+    [org.clojure/clojure-contrib "1.1.0"]
     [org.clojars.somnium/congomongo "0.1.1-SNAPSHOT"
       :exclusions [org.clojars.somnium/mongo-java-driver]]
     [org.incanter/incanter-full "1.2.0-SNAPSHOT"]
@@ -13,5 +13,9 @@
     [net.sf.jung/jung-graph-impl "2.0"]
     [joda-time "1.6"]
     [cupboard "1.0-SNAPSHOT"]
+    [net.1978th/tokyocabinet "1.23"]
+    [com.geni/clojure-protobuf "1.0"]
+    [com.geni/jiraph "1.0"]
   ]
-  :main hello)
+  :native-path "/opt/lib"
+  )
