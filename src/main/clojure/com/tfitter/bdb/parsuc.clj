@@ -48,9 +48,10 @@
 
 ;; TODO instead of getting all numbered-keys, first fetch their count only,
 ;; compute endpoints from index range, then get the corresponding keys only
-(defn agents-get-db [db-name db-env num-agents & [get-vector progress]]
+(defn agents-get-db [db-env db-name num-agents & [get-vector progress]]
   (let [
-      ends-keys     (je/with-db [db-keys db-env db-keys-name :read-only true] (let [
+      db-keys-name (str db-name "-keys")
+      end-keys     (je/with-db [db-keys db-env db-keys-name :read-only true] (let [
                       num-keys  (je/db-count db-keys)
                       pos-ends  (end-positions num-keys num-agents)]
                     (doall (map (comp second (partial je/db-get db-keys)) pos-ends))))
