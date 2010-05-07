@@ -45,45 +45,28 @@
                     (recur (conj! res the-pair) 
                            (je/db-cursor-next curs :key dbe-key :data dbe-data)
                            (inc i))))))))
-  
-(defn do-ranges [db-name db-env numbered-keys agents get-vector progress]
+
+;; TODO instead of getting all numbered-keys, first fetch their count only,
+;; compute endpoints from index range, then get the corresponding keys only
+(defn agents-get-db [db-name db-env num-agents & [get-vector progress]]
   (let [
+      ends-keys     (je/with-db [db-keys db-env db-keys-name :read-only true] (let [
+                      num-keys  (je/db-count db-keys)
+                      pos-ends  (end-positions num-keys num-agents)]
+                    (doall (map (comp second (partial je/db-get db-keys)) pos-ends))))
+      key-ranges   (partition 2 1 end-keys)
       into-what    (if get-vector [] {})
-      total-keys   (count numbered-keys)
-      total-agents (count agents)
-      pos-ends     (end-positions total-keys total-agents)
-      key-ends     (map #(numbered-keys %) pos-ends)
-      key-ranges   (partition 2 1 key-ends)
-      _            (assert (= (count key-ranges) total-agents))
     ]
+    (assert (= (count key-ranges) num-agents))
     (je/with-db [db db-env db-name]
-      (errln "starting parallel agent-get of db " db-name " with " total-agents " agents")
-      (let [agents (map #(send %1 do-range db %2 progress) agents key-ranges)]
+      (errln "starting parallel agent-get of db " db-name " with " num-agents " agents")
+      (let [agents (map #(agent (struct id-chunk % [])) (range num-agents))
+            agents (map #(send %1 do-range db %2 progress) agents key-ranges)]
         (apply await agents)
         (errln " finished agents!")
         (reduce #(into %1 (:chunk @%2)) into-what agents)
         ))))
     
-(defn get-numbered-keys [db-env db-name]
-  (je/with-db [db db-env db-name]
-    (errln "getting numbered keys from db " db-name)
-    (let [resvec
-      (je/with-db-cursor [c db]
-        (loop [res (transient []) the-pair (je/db-cursor-next c)]
-          (if (empty? the-pair)
-            (persistent! res)
-            (recur (conj! res the-pair) (je/db-cursor-next c))
-            )))]
-      (errln "got " (count resvec) " keys")
-      (into {} resvec))))
-
-(defn agents-get-db [num-agents db-env db-main-name & [progress get-vector]]
-  (let [db-keys-name (str db-main-name "-keys")
-    ;; TODO don't read all numbered keys in, get just the range ends!
-        numbered-keys (get-numbered-keys db-env db-keys-name)
-        agents (map #(agent (struct id-chunk % [])) (range num-agents))]
-    ;; (reset-agents agents)
-    (do-ranges db-main-name db-env numbered-keys agents get-vector progress)))
     
 (defn bdb-put-seq [s db-env db-name]
   (err "writing db " db-name "... ")
