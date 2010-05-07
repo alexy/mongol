@@ -59,7 +59,7 @@
       into-what    (if get-vector [] {})
     ]
     (assert (= (count key-ranges) num-agents))
-    (je/with-db [db db-env db-name]
+    (je/with-db [db db-env db-name :read-only true]
       (errln "starting parallel agent-get of db " db-name " with " num-agents " agents")
       (let [agents (map #(agent (struct id-chunk % [])) (range num-agents))
             agents (map #(send %1 do-range db %2 progress) agents key-ranges)]
