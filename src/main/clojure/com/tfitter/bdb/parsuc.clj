@@ -43,7 +43,7 @@
                   (when (and progress (= 0 (mod i progress))) (err id)) 
                   (if (or (nil? the-key) (>= (compare the-key beyond) 0))
                     (do 
-                      (err "agent " id " produced a chunk of length " (count res))
+                      (errln "agent " id " produced a chunk of length " (count res))
                       (struct id-chunk id (persistent! res)))
                     (recur (conj! res the-pair) 
                            (je/db-cursor-next curs :key dbe-key :data dbe-data)
