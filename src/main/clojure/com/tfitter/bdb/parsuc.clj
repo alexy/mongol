@@ -33,6 +33,7 @@
         dbe-key  (DatabaseEntry.)
         dbe-data (DatabaseEntry.)
        ]
+    (errln "agent " id " doing range [" begin ", " beyond ")")  ; ] 
     (je/with-db-cursor [curs db]
       ;; NB does this return a pair already or just places the cursor?
         (loop [res (transient [])
@@ -41,7 +42,9 @@
                (let [the-key (first the-pair)]
                   (when (and progress (= 0 (mod i progress))) (err id)) 
                   (if (or (nil? the-key) (>= (compare the-key beyond) 0))
-                    (struct id-chunk id (persistent! res))
+                    (do 
+                      (err "agent " id " produced a chunk of length " (count res))
+                      (struct id-chunk id (persistent! res)))
                     (recur (conj! res the-pair) 
                            (je/db-cursor-next curs :key dbe-key :data dbe-data)
                            (inc i))))))))
