@@ -1,0 +1,5 @@
+(use 'somnium.congomongo)
+(mongo! :db "twitter")
+(use 'clojure.contrib.repl-utils)
+(add-break-thread!)
+; (set! *print-length* 42)

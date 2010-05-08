@@ -41,7 +41,7 @@
                i 0]
                (let [the-key (first the-pair)]
                   (when (and progress (= 0 (mod i progress))) (err id)) 
-                  (if (or (nil? the-key) (>= (compare the-key beyond) 0))
+                  (if (or (and (not= the-key begin) (nil? the-key)) (>= (compare the-key beyond) 0))
                     (do 
                       (errln "agent " id " produced a chunk of length " (count res))
                       (struct id-chunk id (persistent! res)))
@@ -55,7 +55,7 @@
   (let [
       db-keys-name (str db-name "-keys")
       end-keys     (je/with-db [db-keys db-env db-keys-name :read-only true] (let [
-                      num-keys  (je/db-count db-keys)
+                      num-keys  (int (je/db-count db-keys))
                       pos-ends  (end-positions num-keys num-agents)]
                     (doall (map (comp second (partial je/db-get db-keys)) pos-ends))))
       key-ranges   (partition 2 1 end-keys)
