@@ -10,15 +10,18 @@
 (defn errln [ & args]
   (doto System/err (.println (apply str args)) .flush))
 
-(defn tokyo-read-reps [proto db-pathname]
+(defn tokyo-read-reps [proto db-pathname & [str-load?]]
   (let [
-    db (tc/db-init {:path db-pathname :read-only true :dump protobuf-dump :load (partial protobuf-load proto)})
+    init-params (let [par {:path db-pathname :read-only true}]
+      (if str-load? par 
+        (merge par {:dump protobuf-dump :load (partial protobuf-load proto)})))
+    db (tc/db-init init-params)
     _ (tc/db-open db)
     tc (:db db) 
     r (when (.iterinit tc) 
       (loop [k (.iternext2 tc) res [] i 0] 
         (if (empty? k) res 
-          (do (when (zero? (mod i 10000)) (print "."))  
+          (do (when (zero? (mod i 10000)) (err "."))  
             (recur (.iternext2 tc) (conj 
               res [k (:days (jiraph.tc/db-get db k))]) (inc i))))))]
   (tc/db-close db)
@@ -66,7 +69,8 @@
   (let [db (tc/db-init {:path db-pathname :create true :dump protobuf-dump :load (partial protobuf-load proto)})
     progress (or progress 10000)
     uprots (pmap (fn [[user reps]] [user (protobuf Repliers :user user :days reps)]) graph)
-	_ (time (doall uprots))]
+	;_ (time (doall uprots))
+	]
 		(tc/db-open db)
 		(doseq [[[user prot] i] (map vector uprots (iterate inc 0))]
 		  (when (zero? (mod i progress)) (err "."))
