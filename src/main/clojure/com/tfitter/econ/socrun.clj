@@ -1,5 +1,11 @@
 (use 'clojure.contrib.seq-utils)
 
+(defn sum [xs] (apply + xs))
+(defn err [ & args]
+  (doto System/err (.print (apply str args)) .flush))
+(defn errln [ & args]
+  (doto System/err (.println (apply str args)) .flush))
+
 (defn reps-sorted1? [dreps & [progress]] 
   (loop [[[user ureps :as userdays] :as users] (seq dreps) i 0] 
     (if ureps 
@@ -16,7 +22,7 @@
       (every? true? (map >= s (cons (first s) s)))))) 
     (every? true?))) 
 
-(def get-in-or data keys default
+(defn get-in-or [data keys default]
   "should be in core as (get-in data keys :default default)"
   (or (get-in data keys) default))  
 
@@ -43,101 +49,27 @@
   "group users by their starting day"
   (->> dreps day-ranges (partition-by second)))      
 
-(def soc-run [dreps dments & [alpha beta gamma soc-init]]
-  (let [
-    soc-init (or soc-init 1.0)
-    alpha    (or alpha    0.8)
-    beta     (or beta     0.5)
-    gamma    (or gamma    0.5)
-    
-    params [alpha beta gamma]
-    dcaps {}
-    ;; TODO we have to initialize each users as he appears with 1
-    ustats {}
-    sgraph (struct s-graph dreps dments dcaps ustats)
-    
-    dranges (->> [dreps dments] (map day-ranges) 
-      (apply merge-day-ranges) (sort-by second))
-
-    dstarts (->> dranges (partition-by second) 
-      (map #(vector (comp second first %) %))
-      (into (sorted-map)))
-      
-    first-day (->> dstarts first first)  
-    last-day  (->> dranges (map last) (apply max))  
-    ]
-    
-    (->> (range first-day (inc last-day))
-      (reduce (fn [sgraph day]
-      ;; inject the users first appearing in this cycle
-      (let [ustats (:ustats sgraph)
-        new-users (->> dstarts day (map first))
-        new-ustats (->> new-users 
-          (map #(vector % (struct user-stats soc-init day {} {} {} {}))) 
-          (into {}))
-        ustats (merge ustats new-ustats)
-        sgraph (assoc sgraph :ustats ustats)
-        ]
-        (errln "day " day)
-        (soc-day sgraph params day))) 
-      sgraph))))
-  
-  
-(def soc-day [sgraph [alpha beta gamma :as params] day]
-  (let [
-    ;; TODO have sgraph as 
-    ustats (:ustats sgraph)
-    ;; TODO does it make sense to carry users separately from ustats,
-    ;; perhaps with the first day they appear in our data?
-    users  (map first ustats)
-    
-    prestats (pmap (partial soc-user-day-sum sgraph params day) users)
-    prenorms (map first prestats)
-    
-    [out-norm ins-norm-back ins-norm-all :as norms] (reduce (fn [sums terms]
-             (map + sums terms)) prenorms)
-             
-    ustats (->> ustats (map (fn [numers [user {:keys [soc] :as stats}]]
-      (let [[outs* ins-back* ins-all*] (map / numers norms)
-        soc (+ (* alpha soc) (+ (* beta outs*) 
-          (* (- 1. beta) (+ (* gamma ins-back*) (* (- 1. gamma) ins-all*)))))
-        stats (assoc stats :soc soc)
-        ]
-        [user stats])) prenorms) (into {}))
-        
-    ;; day in fn is the sam day as soc-day param day
-    dcaps (->> ustats (reduce (fn [res [user {:keys [day soc]}]] 
-      (assoc! res user (assoc (or (res user) (sorted-map)) day soc))) 
-      (transient dcaps)) persistent!) 
-    ]
-    (assoc sgraph :ustats ustats :dcaps dcaps)))
 
 
 (defn get-soccap [ustats user]
   (let [stats (ustats user)]
   (if stats (:soc stats) 0.)))
   
-(def soc-user-day-sum [sgraph day user]
+  
+(defn soc-user-day-sum [sgraph day user]
   "NB acc is a list, conj prepends to it"
   (let [
     {:keys [dreps dments ustats]} sgraph
     stats (ustats user)
-    reps  (get-in dreps [user day])
-    ments (get-in dments [user day])
+    dr (get-in dreps [user day])
+    dm (get-in dments [user day])
     ]
-    (if (not (or reps ments))
+    (if (not (or dr dm))
       [nil stats]
       ;; we had edges this cycle -- now let's dance and compute the change!
-      (let [
-        reps  (or reps {})
-        ments (or ments {})
-        
-        {:keys [day ins outs tot bal]} stats
-        
-        dr   (reps day) ; or do (get-in [user day]) instead of binding reps, same w/ments
-			  dm   (ments day)
-			  _	   (assert (or dr dm))
-        
+      (let [        
+        {:keys [soc day ins outs tot bal]} stats
+                
         ;; find all those who talked to us in the past to whom we replied now
         out-sum (if dr (->> dr (map (fn [[to num]]
           (let [to-bal (get bal to 0)] (if (>= to-bal 0) 0.
@@ -159,7 +91,7 @@
             (let [from-tot (get tot from 1.)]
                 (* num from-tot from-soc)))))) sum) 0.)
         
-        normalize [out-sum in-sum-back in-sum-all]
+        terms [out-sum in-sum-back in-sum-all]
       
       	dm-  (when dm (->> dm (map (fn [[k v]] [k (- v)])) (into {})))
       	
@@ -168,7 +100,86 @@
 			  tot  (merge-with + tot dr dm)
 			  bal  (merge-with + bal dr dm-)
 			  
+			  ;; TODO can assoc only what changed instead of recreating
 			  stats (struct user-stats soc day ins outs tot bal)
 			  ]
 
-      [normalize stats]))))
+      [terms stats]))))
+
+(defn safe-divide [numer denom] (if (zero? denom) 0 (/ numer denom)))      
+      
+(defn soc-day [sgraph [alpha beta gamma :as params] day]
+  (assert (every? number? params))
+  (let [
+    ;; TODO have sgraph as 
+    {:keys [ustats dcaps]} sgraph
+    ;; TODO does it make sense to carry users separately from ustats,
+    ;; perhaps with the first day they appear in our data?
+    users  (map first ustats)
+    
+    terms-stats (map (partial soc-user-day-sum sgraph day) users)
+    sum-terms (map first terms-stats)
+    
+    norms (reduce (fn [sums terms] (map + sums terms)) (remove nil? sum-terms))
+             
+    ustats (->> ustats (map (fn [numers [user {:keys [soc] :as stats} :as user-stats]]
+      (let [soc (if numers 
+      	(let [
+      		_ (assert (= 3 (count numers)))
+      		[outs* ins-back* ins-all* :as normalized] (map safe-divide numers norms)]
+        	(assert (and (= 3 (count normalized)) (every? number? normalized)))
+        	(+ (* alpha soc) (* (- 1. alpha) (+ (* beta outs*) 
+          		(* (- 1. beta) (+ (* gamma ins-back*) (* (- 1. gamma) ins-all*)))))))
+         (* alpha soc))
+        stats (assoc stats :soc soc)]
+        [user stats])) sum-terms) (into {}))
+        
+    ;; day in fn is the sam day as soc-day param day
+    dcaps (->> ustats (reduce (fn [res [user {:keys [day soc]}]] 
+      (assoc! res user (assoc (or (res user) (sorted-map)) day soc))) 
+      (transient dcaps)) persistent!) 
+    ]
+    (assoc sgraph :ustats ustats :dcaps dcaps)))
+    
+
+(defn soc-run [dreps dments & [alpha beta gamma soc-init]]
+  (let [
+    soc-init (or soc-init 1.0)
+    alpha    (or alpha    0.8)
+    beta     (or beta     0.5)
+    gamma    (or gamma    0.5)
+    
+    params [alpha beta gamma]
+    dcaps {}
+    ;; TODO we have to initialize each users as he appears with 1
+    ustats {}
+    sgraph (struct s-graph dreps dments dcaps ustats)
+    
+    dranges (->> [dreps dments] (map day-ranges) 
+      (apply merge-day-ranges) (sort-by second))
+
+    dstarts (->> dranges (partition-by second) 
+      (map #(vector ((comp second first) %) %))
+      (into (sorted-map)))
+      
+    first-day (->> dstarts first first)  
+    last-day  (->> dranges (map last) (apply max))  
+    ]
+    
+    (errln "doing days from " first-day " to " last-day)
+    
+    (->> (range first-day (inc last-day))
+      (reduce (fn [sgraph day]
+      ;; inject the users first appearing in this cycle
+      (let [ustats (:ustats sgraph)
+        new-users (map first (dstarts day))
+        _ (errln "adding " (count new-users) " new users on day " day)
+        new-ustats (->> new-users 
+          (map #(vector % (struct user-stats soc-init day {} {} {} {}))) 
+          (into {}))
+        ustats (merge ustats new-ustats)
+        sgraph (assoc sgraph :ustats ustats)
+        ]
+        (errln "day " day)
+        (soc-day sgraph params day))) 
+      sgraph))))
