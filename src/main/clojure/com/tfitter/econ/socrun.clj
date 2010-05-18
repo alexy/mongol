@@ -1,17 +1,86 @@
+(use 'clojure.contrib.seq-utils)
+
+(defn reps-sorted1? [dreps & [progress]] 
+  (loop [[[user ureps :as userdays] :as users] (seq dreps) i 0] 
+    (if ureps 
+      (if (loop [prev 0 [[day _] :as days] (seq ureps)] 
+        (when (and progress (= 0 (mod i progress))) (print ".") (.flush System/out)) 
+        (if day (if (<= prev day) 
+          (recur day (next days)) 
+            (do (println userdays) false)) true)) 
+            (recur (next users) (inc i)) false) true)))
+
+(defn reps-sorted2? [dreps] 
+  (->> dreps (map (fn [[_ days]]  ; NB pmap 3x slower here! 
+    (let [s (map first days)] 
+      (every? true? (map >= s (cons (first s) s)))))) 
+    (every? true?))) 
+
 (def get-in-or data keys default
   "should be in core as (get-in data keys :default default)"
   (or (get-in data keys) default))  
 
-(defstruct s-graph :dreps :dments :dcaps :ustats)
-(defstruct user-stats :soc :day :ins :outs :tot :bal)  
+(defstruct s-graph    :dreps :dments :dcaps :ustats)
+(defstruct user-stats :soc :day :ins :outs :tot :bal)
 
-(def soc-run [dreps dments days sc-init alpha beta gamma]
-  (let [params [alpha beta gamma]
+(defn day-ranges [dreps]
+  "find the day range when each user exists in dreps
+  PRE: dreps must be sorted in adjacency lists by day!"
+  ;; (assert (reps-sorted1? dreps))
+  (->> dreps (map (fn [[user days]] 
+    (let [[start _] (first days) [finish _] (last days)] 
+      [user start finish])))))
+      
+(defn merge-day-ranges [dr1 dr2]
+  "merge two day-ranges results"
+  (let [mr2 (->> dr2 (map (fn [[u s f]] [u [s f]])) (into {}))]
+    (->> dr1 (map (fn [[user s1 f1]]
+      (let [[s2 f2 :as have2] (mr2 user)
+        [start finish] (if have2 [(min s1 s2) (max f1 f2)] [s1 f1])]
+          [user start finish]))))))
+      
+(defn day-starts [dreps]
+  "group users by their starting day"
+  (->> dreps day-ranges (partition-by second)))      
+
+(def soc-run [dreps dments & [alpha beta gamma soc-init]]
+  (let [
+    soc-init (or soc-init 1.0)
+    alpha    (or alpha    0.8)
+    beta     (or beta     0.5)
+    gamma    (or gamma    0.5)
+    
+    params [alpha beta gamma]
     dcaps {}
     ;; TODO we have to initialize each users as he appears with 1
     ustats {}
     sgraph (struct s-graph dreps dments dcaps ustats)
-    ]))
+    
+    dranges (->> [dreps dments] (map day-ranges) 
+      (apply merge-day-ranges) (sort-by second))
+
+    dstarts (->> dranges (partition-by second) 
+      (map #(vector (comp second first %) %))
+      (into (sorted-map)))
+      
+    first-day (->> dstarts first first)  
+    last-day  (->> dranges (map last) (apply max))  
+    ]
+    
+    (->> (range first-day (inc last-day))
+      (reduce (fn [sgraph day]
+      ;; inject the users first appearing in this cycle
+      (let [ustats (:ustats sgraph)
+        new-users (->> dstarts day (map first))
+        new-ustats (->> new-users 
+          (map #(vector % (struct user-stats soc-init day {} {} {} {}))) 
+          (into {}))
+        ustats (merge ustats new-ustats)
+        sgraph (assoc sgraph :ustats ustats)
+        ]
+        (errln "day " day)
+        (soc-day sgraph params day))) 
+      sgraph))))
   
   
 (def soc-day [sgraph [alpha beta gamma :as params] day]
@@ -22,7 +91,7 @@
     ;; perhaps with the first day they appear in our data?
     users  (map first ustats)
     
-    prestats (map (partial soc-user-day-sum sgraph params day) users)
+    prestats (pmap (partial soc-user-day-sum sgraph params day) users)
     prenorms (map first prestats)
     
     [out-norm ins-norm-back ins-norm-all :as norms] (reduce (fn [sums terms]
