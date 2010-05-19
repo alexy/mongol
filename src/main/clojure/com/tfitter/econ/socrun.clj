@@ -1,5 +1,10 @@
 (use 'clojure.contrib.seq-utils)
 
+;;  (time (def dreps (tokyo-read-reps Repliers "/opt/data/twitter/tokyo/dreps.hdb")))
+;;  (time (def dreps (->> dreps (map (fn [[k v]] [k (into (sorted-map) v)])) (into {}))))
+;;  (time (def dments (tokyo-read-reps Repliers "/opt/data/twitter/tokyo/dments.hdb")))
+;;  (time (def dments (->> dments (map (fn [[k v]] [k (into (sorted-map) v)])) (into {}))))
+
 (defn sum [xs] (apply + xs))
 (defn err [ & args]
   (doto System/err (.print (apply str args)) .flush))
@@ -8,7 +13,8 @@
 
 (defn reps-sorted1? [dreps & [progress]] 
   (loop [[[user ureps :as userdays] :as users] (seq dreps) i 0] 
-    (if ureps 
+    ;; TODO compact nested ifs into cond?
+    (if ureps
       (if (loop [prev 0 [[day _] :as days] (seq ureps)] 
         (when (and progress (= 0 (mod i progress))) (print ".") (.flush System/out)) 
         (if day (if (<= prev day) 
@@ -16,11 +22,14 @@
             (do (println userdays) false)) true)) 
             (recur (next users) (inc i)) false) true)))
 
+(defn sorted-by? [pred s] 
+  (if-let [ns (next s)] 
+    (let [[a b] s] 
+      (and (pred a b) (recur pred ns))) 
+    true)) 
+        
 (defn reps-sorted2? [dreps] 
-  (->> dreps (map (fn [[_ days]]  ; NB pmap 3x slower here! 
-    (let [s (map first days)] 
-      (every? true? (map >= s (cons (first s) s)))))) 
-    (every? true?))) 
+ (every? #(sorted-by? >= (map first (val %))) dreps))    
 
 (defn get-in-or [data keys default]
   "should be in core as (get-in data keys :default default)"
@@ -191,3 +200,8 @@
         (errln "day " day)
         (soc-day sgraph params day))) 
       sgraph))))
+
+;; (def ustats (:ustats sgraph))
+;; (time (def ucap (->> ustats (map (fn [[user {:keys [soc]}]] [user soc])) (sort-by second >))))
+;; (def ucapday (map (fn [[user soc]] [user soc (->> user ustats :day)]) ucap))
+;; (->> ucapday (filter #(< (last %) 10)) (take 20))
