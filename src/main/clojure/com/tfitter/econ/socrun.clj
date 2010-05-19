@@ -118,12 +118,17 @@
     users  (map first ustats)
     
     terms-stats (map (partial soc-user-day-sum sgraph day) users)
-    sum-terms (map first terms-stats)
+    sum-terms   (map first terms-stats)
     
-    norms (reduce (fn [sums terms] (map + sums terms)) (remove nil? sum-terms))
+    _ (errln "got sum-terms, length " (count sum-terms))
+    
+    ;; NB the nested map had to be doall'ed or ot caused StackOverflowError!
+    norms (reduce (fn [sums terms] (doall (map + sums terms))) (remove nil? sum-terms))
              
-    ustats (->> ustats (map (fn [numers [user {:keys [soc] :as stats} :as user-stats]]
-      (let [soc (if numers 
+    ustats (->> terms-stats (map (fn [user [numers stats]]
+      (let [
+        soc (:soc stats)
+        soc (if numers 
       	(let [
       		_ (assert (= 3 (count numers)))
       		[outs* ins-back* ins-all* :as normalized] (map safe-divide numers norms)]
@@ -131,10 +136,13 @@
         	(+ (* alpha soc) (* (- 1. alpha) (+ (* beta outs*) 
           		(* (- 1. beta) (+ (* gamma ins-back*) (* (- 1. gamma) ins-all*)))))))
          (* alpha soc))
-        stats (assoc stats :soc soc)]
-        [user stats])) sum-terms) (into {}))
-        
-    ;; day in fn is the sam day as soc-day param day
+        stats (assoc stats :soc soc)
+        ]
+        [user stats])) users) (into {}))
+             
+    _ (errln "got ustats")
+    
+    ;; day in fn is the same day as soc-day param day
     dcaps (->> ustats (reduce (fn [res [user {:keys [day soc]}]] 
       (assoc! res user (assoc (or (res user) (sorted-map)) day soc))) 
       (transient dcaps)) persistent!) 
@@ -145,7 +153,7 @@
 (defn soc-run [dreps dments & [alpha beta gamma soc-init]]
   (let [
     soc-init (or soc-init 1.0)
-    alpha    (or alpha    0.8)
+    alpha    (or alpha    0.00001)
     beta     (or beta     0.5)
     gamma    (or gamma    0.5)
     
