@@ -1,6 +1,7 @@
 (require '[jiraph.tc :as tc])
 (use 'protobuf)
 (use '[clojure.contrib.seq-utils :only [partition-all]])
+(require '(clj-json [core :as json]))
 
 (defprotobuf Repliers Dreps Repliers)
 
@@ -90,3 +91,31 @@
       (into (sorted-map)))])) 
     (into {})))
   
+  
+(defn tokyo-write-jackson [graph db-pathname & [progress]]
+  (let [db (tc/db-init {:path db-pathname :create true})
+    progress (or progress 10000)
+	  ]
+		(tc/db-open db)
+		(doseq [[[user days] i] (map vector graph (iterate inc 0))]
+		  (when (zero? (mod i progress)) (err "."))
+      ;; TODO can sort days for sure while at it
+		  (tc/db-add db user (json/generate-string days)))
+	(tc/db-close db)))
+	
+	
+(defn tokyo-read-jackson [db-pathname & [progress]]
+  (let [
+    progress (or progress 10000)
+    init-params {:path db-pathname :read-only true}
+    db (tc/db-init init-params)
+    _ (tc/db-open db)
+    tc (:db db) 
+    r (when (.iterinit tc) 
+      (loop [k (.iternext2 tc) res [] i 0] 
+        (if (empty? k) res 
+          (do (when (and progress (zero? (mod i progress))) (err "."))  
+            (recur (.iternext2 tc) (conj 
+              res [k (json/parse-string (jiraph.tc/db-get db k))]) (inc i))))))]
+  (tc/db-close db)
+  (into {} r)))
