@@ -93,7 +93,7 @@
   
   
 (defn tokyo-write-jackson [graph db-pathname & [progress]]
-  (let [db (tc/db-init {:path db-pathname :create true})
+  (let [db (tc/db-init {:path db-pathname :create true :dump #(.getBytes %)})
     progress (or progress 10000)
 	  ]
 		(tc/db-open db)
